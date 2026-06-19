@@ -26,6 +26,11 @@ test('empty or whitespace query matches nothing', () => {
   assert.equal(matchRomaji('   ', { romaji: 'ka', aliases: [] }), false);
 });
 
+test('unknown reading matches nothing', () => {
+  assert.equal(matchRomaji('xyz', { romaji: 'ka', aliases: ['ky'] }), false);
+  assert.equal(matchRomaji('q', { romaji: 'shi', aliases: ['si'] }), false);
+});
+
 test('data is wired and ids are unique', () => {
   assert.ok(KANA.length > 100);
   const ids = KANA.map(e => e.id);

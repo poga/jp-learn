@@ -27,7 +27,11 @@ section { margin-bottom: 2.5rem; }
 h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
 .grid { display: grid; gap: .4rem; margin-bottom: 1rem; }
 .grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
-.grid.cols-3 { grid-template-columns: repeat(3, 1fr); max-width: 60%; }
+.grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+  /* keep 3-col yōon cells the same size as the 5-col grids */
+  max-width: 60%;
+}
 .cell {
   aspect-ratio: 1;
   display: flex;
