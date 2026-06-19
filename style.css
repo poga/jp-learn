@@ -39,3 +39,19 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
   border-radius: .5rem;
 }
 .cell.empty { background: transparent; border: none; }
+
+:root {
+  --match: #ffd54a;
+  --match-line: #e0a800;
+}
+#filter:focus { border-color: var(--match-line); }
+.cell {
+  transition: transform .12s ease, background .12s ease, opacity .12s ease;
+}
+.cell.is-match {
+  background: var(--match);
+  border-color: var(--match-line);
+  transform: scale(1.08);
+  font-weight: 700;
+}
+.cell.is-dim { opacity: .22; }

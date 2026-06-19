@@ -30,3 +30,16 @@ function makeSection(script, title) {
 const app = document.getElementById('app');
 app.appendChild(makeSection('hira', 'ひらがな'));
 app.appendChild(makeSection('kata', 'カタカナ'));
+
+const filter = document.getElementById('filter');
+const allCells = app.querySelectorAll('.cell[data-id]');
+
+filter.addEventListener('input', () => {
+  const q = filter.value.trim();
+  const active = q.length > 0;
+  allCells.forEach(c => {
+    const hit = active && matchRomaji(q, byId[c.dataset.id]);
+    c.classList.toggle('is-match', hit);
+    c.classList.toggle('is-dim', active && !hit);
+  });
+});
