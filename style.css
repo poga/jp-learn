@@ -1,0 +1,41 @@
+:root {
+  --bg: #faf7f2;
+  --cell: #ffffff;
+  --line: #e7e0d6;
+  --text: #2b2b2b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 2rem 1rem 4rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+}
+header { max-width: 640px; margin: 0 auto 2rem; text-align: center; }
+h1 { font-size: 2rem; margin: 0 0 1rem; letter-spacing: .12em; }
+#filter {
+  width: 100%;
+  padding: .75rem 1rem;
+  font-size: 1.1rem;
+  border: 2px solid var(--line);
+  border-radius: .6rem;
+  outline: none;
+}
+main { max-width: 640px; margin: 0 auto; }
+section { margin-bottom: 2.5rem; }
+h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
+.grid { display: grid; gap: .4rem; margin-bottom: 1rem; }
+.grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+.grid.cols-3 { grid-template-columns: repeat(3, 1fr); max-width: 60%; }
+.cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+}
+.cell.empty { background: transparent; border: none; }
