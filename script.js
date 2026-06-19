@@ -9,10 +9,12 @@ function makeCell(id, script) {
   return div;
 }
 
-function makeGrid(script, rows, cols) {
+function makeGrid(script, groups, rows) {
   const grid = document.createElement('div');
-  grid.className = `grid cols-${cols}`;
-  rows.forEach(row => row.forEach(id => grid.appendChild(makeCell(id, script))));
+  grid.className = `grid rows-${rows}`;
+  // each group is a top-to-bottom column; place groups right-to-left
+  [...groups].reverse().forEach(group =>
+    group.forEach(id => grid.appendChild(makeCell(id, script))));
   return grid;
 }
 
