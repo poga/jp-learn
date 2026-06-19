@@ -3,6 +3,8 @@
   --cell: #ffffff;
   --line: #e7e0d6;
   --text: #2b2b2b;
+  --cell-size: 3.2rem;
+  --cell-font: 2.1rem;
 }
 * { box-sizing: border-box; }
 body {
@@ -23,21 +25,26 @@ h1 { font-size: 2rem; margin: 0 0 1rem; letter-spacing: .12em; }
   outline: none;
 }
 main { max-width: 640px; margin: 0 auto; }
-section { margin-bottom: 2.5rem; }
+section { margin-bottom: 2.5rem; overflow-x: auto; }
 h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
-.grid { display: grid; gap: .4rem; margin-bottom: 1rem; }
-.grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
-.grid.cols-3 {
-  grid-template-columns: repeat(3, 1fr);
-  /* keep 3-col yōon cells the same size as the 5-col grids */
-  max-width: 60%;
+/* columns read top-to-bottom; groups laid out right-to-left in script.js */
+.grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--cell-size);
+  justify-content: start;
+  gap: .4rem;
+  margin-bottom: 1rem;
 }
+.grid.rows-5 { grid-template-rows: repeat(5, var(--cell-size)); }
+.grid.rows-3 { grid-template-rows: repeat(3, var(--cell-size)); }
 .cell {
-  aspect-ratio: 1;
+  width: var(--cell-size);
+  height: var(--cell-size);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: var(--cell-font);
   background: var(--cell);
   border: 1px solid var(--line);
   border-radius: .5rem;
