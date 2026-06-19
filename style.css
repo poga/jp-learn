@@ -3,8 +3,9 @@
   --cell: #ffffff;
   --line: #e7e0d6;
   --text: #2b2b2b;
-  --cell-size: 3.2rem;
+  --cell-size: 3rem;
   --cell-font: 2.1rem;
+  --cell-font-yoon: 1.4rem;
 }
 * { box-sizing: border-box; }
 body {
@@ -25,7 +26,7 @@ h1 { font-size: 2rem; margin: 0 0 1rem; letter-spacing: .12em; }
   outline: none;
 }
 main { max-width: 640px; margin: 0 auto; }
-section { margin-bottom: 2.5rem; overflow-x: auto; }
+section { margin-bottom: 2.5rem; }
 h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
 /* columns read top-to-bottom; groups laid out right-to-left in script.js */
 .grid {
@@ -45,11 +46,14 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
   align-items: center;
   justify-content: center;
   font-size: var(--cell-font);
+  white-space: nowrap;
   background: var(--cell);
   border: 1px solid var(--line);
   border-radius: .5rem;
 }
 .cell.empty { background: transparent; border: none; }
+/* yōon cells hold two kana; smaller font keeps them on one line */
+.grid.rows-3 .cell { font-size: var(--cell-font-yoon); }
 
 :root {
   --match: #ffd54a;
