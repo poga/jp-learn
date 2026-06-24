@@ -71,9 +71,9 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
 }
 .cell.is-dim { opacity: .22; }
 
-.cell.speakable { cursor: pointer; }
-.cell.speakable:hover { border-color: var(--match-line); }
-.cell.speakable:active { transform: scale(.94); }
+.cell.clickable { cursor: pointer; }
+.cell.clickable:hover { border-color: var(--match-line); }
+.cell.clickable:active { transform: scale(.94); }
 
 #toast {
   position: fixed;
