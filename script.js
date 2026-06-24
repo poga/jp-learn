@@ -33,8 +33,26 @@ const app = document.getElementById('app');
 app.appendChild(makeSection('hira', 'ひらがな'));
 app.appendChild(makeSection('kata', 'カタカナ'));
 
+// speak the kana aloud using the browser's Japanese voice
+function speak(text) {
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP';
+  u.rate = 0.8;
+  const jp = synth.getVoices().find(v => v.lang.startsWith('ja'));
+  if (jp) u.voice = jp;
+  synth.speak(u);
+}
+
 const filter = document.getElementById('filter');
 const allCells = app.querySelectorAll('.cell[data-id]');
+
+allCells.forEach(c => {
+  c.classList.add('speakable');
+  c.addEventListener('click', () => speak(c.textContent));
+});
 
 filter.addEventListener('input', () => {
   const q = filter.value.trim();
