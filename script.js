@@ -46,12 +46,30 @@ function speak(text) {
   synth.speak(u);
 }
 
+// brief popup showing the reading
+let toastTimer;
+function showToast(text) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 1200);
+}
+
 const filter = document.getElementById('filter');
 const allCells = app.querySelectorAll('.cell[data-id]');
 
 allCells.forEach(c => {
   c.classList.add('speakable');
-  c.addEventListener('click', () => speak(c.textContent));
+  c.addEventListener('click', () => {
+    speak(c.textContent);
+    showToast(byId[c.dataset.id].romaji);
+  });
 });
 
 filter.addEventListener('input', () => {

@@ -74,3 +74,20 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
 .cell.speakable { cursor: pointer; }
 .cell.speakable:hover { border-color: var(--match-line); }
 .cell.speakable:active { transform: scale(.94); }
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translate(-50%, 1rem);
+  padding: .5rem 1.1rem;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 1.3rem;
+  letter-spacing: .04em;
+  border-radius: 2rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+#toast.show { opacity: .95; transform: translate(-50%, 0); }
