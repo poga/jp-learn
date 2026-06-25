@@ -112,8 +112,11 @@ const KANA = [
   { id: 'pyo', hira: 'ぴょ', kata: 'ピョ', romaji: 'pyo', aliases: [], group: 'yoon' },
 ];
 
-// Grid placement. null = empty cell.
+// Grid placement. null = empty cell. Each inner array is one top-to-bottom
+// column; dakuten/handakuten columns line up under their gojūon base.
+const EMPTY = [null, null, null, null, null];
 const LAYOUT = {
+  //     a     ka    sa    ta    na    ha    ma    ya    ra    wa    n
   gojuon: [
     ['a',  'i',  'u',  'e',  'o'],
     ['ka', 'ki', 'ku', 'ke', 'ko'],
@@ -127,12 +130,16 @@ const LAYOUT = {
     ['wa', null, null, null, 'wo'],
     ['n',  null, null, null, null],
   ],
+  // voiced rows under ka/sa/ta/ha; pa rides left of ba to skip a row band
   dakuten: [
+    EMPTY,
     ['ga', 'gi',  'gu',  'ge', 'go'],
     ['za', 'ji',  'zu',  'ze', 'zo'],
     ['da', 'dji', 'dzu', 'de', 'do'],
+    EMPTY,
     ['ba', 'bi',  'bu',  'be', 'bo'],
     ['pa', 'pi',  'pu',  'pe', 'po'],
+    EMPTY, EMPTY, EMPTY, EMPTY,
   ],
   yoon: [
     ['kya', 'kyu', 'kyo'],
