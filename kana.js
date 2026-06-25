@@ -115,6 +115,7 @@ const KANA = [
 // Grid placement. null = empty cell. Each inner array is one top-to-bottom
 // column; dakuten/handakuten columns line up under their gojūon base.
 const EMPTY = [null, null, null, null, null];
+const EMPTY3 = [null, null, null];
 const LAYOUT = {
   //     a     ka    sa    ta    na    ha    ma    ya    ra    wa    n
   gojuon: [
@@ -141,18 +142,29 @@ const LAYOUT = {
     ['pa', 'pi',  'pu',  'pe', 'po'],
     EMPTY, EMPTY, EMPTY, EMPTY,
   ],
+  // plain yōon under their consonant column (kya↔ka, sha↔sa, cha↔ta, …)
   yoon: [
+    EMPTY3,
     ['kya', 'kyu', 'kyo'],
     ['sha', 'shu', 'sho'],
     ['cha', 'chu', 'cho'],
     ['nya', 'nyu', 'nyo'],
     ['hya', 'hyu', 'hyo'],
     ['mya', 'myu', 'myo'],
+    EMPTY3,
     ['rya', 'ryu', 'ryo'],
+    EMPTY3, EMPTY3,
+  ],
+  // voiced yōon, aligned under the dakuten row (gya↔ga, ja↔za, bya↔ba, pya↔pa)
+  yoonVoiced: [
+    EMPTY3,
     ['gya', 'gyu', 'gyo'],
     ['ja',  'ju',  'jo'],
+    EMPTY3,
+    EMPTY3,
     ['bya', 'byu', 'byo'],
     ['pya', 'pyu', 'pyo'],
+    EMPTY3, EMPTY3, EMPTY3, EMPTY3,
   ],
 };
 

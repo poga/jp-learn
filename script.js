@@ -26,6 +26,7 @@ function makeSection(script, title) {
   section.appendChild(makeGrid(script, LAYOUT.gojuon, 5));
   section.appendChild(makeGrid(script, LAYOUT.dakuten, 5));
   section.appendChild(makeGrid(script, LAYOUT.yoon, 3));
+  section.appendChild(makeGrid(script, LAYOUT.yoonVoiced, 3));
   return section;
 }
 

@@ -35,8 +35,8 @@ test('data is wired and ids are unique', () => {
   assert.ok(KANA.length > 100);
   const ids = KANA.map(e => e.id);
   assert.equal(new Set(ids).size, ids.length);
-  const layoutIds = [...LAYOUT.gojuon, ...LAYOUT.dakuten, ...LAYOUT.yoon]
-    .flat().filter(Boolean);
+  const layoutIds = [...LAYOUT.gojuon, ...LAYOUT.dakuten, ...LAYOUT.yoon,
+    ...LAYOUT.yoonVoiced].flat().filter(Boolean);
   const known = new Set(ids);
   for (const id of layoutIds) assert.ok(known.has(id), `unknown id ${id}`);
 });
