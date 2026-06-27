@@ -3,9 +3,12 @@
   --cell: #ffffff;
   --line: #e7e0d6;
   --text: #2b2b2b;
-  --cell-size: 3rem;
-  --cell-font: 2.1rem;
-  --cell-font-yoon: 1.4rem;
+  --gap: .4rem;
+  /* shrink the 11-column grid to fit narrow viewports; caps at 3rem on desktop.
+     2rem = body's horizontal padding, 10 gaps between 11 columns */
+  --cell-size: min(3rem, (100vw - 2rem - 10 * var(--gap)) / 11);
+  --cell-font: calc(var(--cell-size) * .7);
+  --cell-font-yoon: calc(var(--cell-size) * .46);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -45,7 +48,7 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
   grid-auto-flow: column;
   grid-auto-columns: var(--cell-size);
   justify-content: start;
-  gap: .4rem;
+  gap: var(--gap);
   margin-bottom: 1rem;
 }
 .grid.rows-5 { grid-template-rows: repeat(5, var(--cell-size)); }
