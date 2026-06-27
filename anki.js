@@ -2,7 +2,9 @@
 // queue, and the flip/grade UI. Browser-only.
 
 const STORE_KEY = 'anki-srs-v1';
+const STATS_KEY = 'anki-stats-v1';
 const NEW_PER_SESSION = 20;
+const MATURE_DAYS = 21; // Anki's young/mature cutoff
 const today = Math.floor(Date.now() / 86400000);
 
 const byId = Object.fromEntries(KANA.map(e => [e.id, e]));
@@ -18,6 +20,17 @@ function saveStore() {
 }
 const store = loadStore();
 
+// Lifetime study log: streaks, retention, per-day counts. Separate key so the
+// scheduler store stays a clean card→state map.
+function loadStats() {
+  try { return Object.assign(newStats(), JSON.parse(localStorage.getItem(STATS_KEY))); }
+  catch (e) { return newStats(); }
+}
+function saveStats() {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {}
+}
+const stats = loadStats();
+
 // A card is one kana in one script; あ and ア are learned separately.
 const cardId = (entryId, script) => `${entryId}:${script}`;
 const stateFor = id => store[id] || newCard();
@@ -28,7 +41,8 @@ function parseCard(id) {
 }
 
 const $ = id => document.getElementById(id);
-const deckBar = $('deck-bar'), statsEl = $('stats'), stage = $('stage');
+const deckBar = $('deck-bar'), statsEl = $('stats'), streakEl = $('streak');
+const stage = $('stage');
 const doneEl = $('done'), cardEl = $('card'), hintEl = $('hint');
 const gradesEl = $('grades'), scriptEl = $('card-script');
 const frontEl = $('card-front'), readingEl = $('card-reading');
@@ -114,8 +128,11 @@ function flip() {
 function grade(g) {
   if (!flipped || !current) return;
   store[current] = schedule(stateFor(current), g, today);
+  recordReview(stats, g, today);
   saveStore();
+  saveStats();
   reviewed++;
+  updateStreak();
   if (g === 'again') queue.push(current); // relearn before the session ends
   next();
 }
@@ -130,6 +147,44 @@ function next() {
 function updateStats() {
   const left = queue.length + (current ? 1 : 0);
   statsEl.textContent = `${reviewed} reviewed · ${left} left`;
+}
+
+function updateStreak() {
+  const cur = currentStreak(stats, today), done = reviewsOn(stats, today);
+  streakEl.textContent = cur > 0
+    ? `🔥 ${cur}-day streak${done ? ` · ${done} today` : ''}`
+    : 'study today to start a streak';
+}
+
+// Split the selected deck into new / learning / mature, à la Anki's counts.
+function deckBreakdown() {
+  const ids = deckCards();
+  let fresh = 0, learning = 0, mature = 0;
+  for (const id of ids) {
+    const st = stateFor(id);
+    if (st.new) fresh++;
+    else if (st.interval >= MATURE_DAYS) mature++;
+    else learning++;
+  }
+  return { fresh, learning, mature, total: ids.length };
+}
+
+// The summary tiles + progress bar shown when a session ends.
+function statsPanel() {
+  const ret = retention(stats);
+  const retTxt = ret == null ? '—' : Math.round(ret * 100) + '%';
+  const bd = deckBreakdown();
+  const learned = bd.learning + bd.mature;
+  const pct = bd.total ? Math.round(learned / bd.total * 100) : 0;
+  return `<div class="stat-grid">
+      <div class="stat"><b>🔥 ${currentStreak(stats, today)}</b><span>day streak</span></div>
+      <div class="stat"><b>${bestStreak(stats)}</b><span>best</span></div>
+      <div class="stat"><b>${reviewsOn(stats, today)}</b><span>today</span></div>
+      <div class="stat"><b>${retTxt}</b><span>retention</span></div>
+    </div>
+    <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <p class="progress-label">${learned} / ${bd.total} learned ·
+      ${bd.fresh} new · ${bd.learning} learning · ${bd.mature} mature</p>`;
 }
 
 // Earliest day the deck has anything to study, or null if fully buried.
@@ -159,7 +214,7 @@ function showDone() {
     ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${when}`
     : `nothing due right now.${when}`;
   doneEl.innerHTML = `<div class="done-mark">${head}</div>` +
-    `<p class="done-note">${body}</p>` +
+    `<p class="done-note">${body}</p>` + statsPanel() +
     '<button id="restart" class="grade good">study again</button>';
   $('restart').addEventListener('click', startSession);
 }
@@ -188,4 +243,5 @@ document.addEventListener('keydown', ev => {
 });
 
 applyPref();
+updateStreak();
 startSession();

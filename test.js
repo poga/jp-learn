@@ -2,6 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { matchRomaji, KANA, LAYOUT } = require('./kana.js');
 const { newCard, schedule, isDue, MIN_EASE } = require('./srs.js');
+const { newStats, recordReview, currentStreak, bestStreak,
+  retention } = require('./stats.js');
 
 test('prefix match returns true for multiple on a single letter', () => {
   assert.equal(matchRomaji('k', { romaji: 'ka', aliases: [] }), true);
@@ -86,4 +88,51 @@ test('new cards are always due; reviews due only on or after their date', () => 
   assert.equal(isDue(newCard(), 0), true);
   assert.equal(isDue({ new: false, due: 105 }, 100), false);
   assert.equal(isDue({ new: false, due: 100 }, 100), true);
+});
+
+test('reviews bucket per day and split out lapses', () => {
+  const s = newStats();
+  recordReview(s, 'good', 4);
+  recordReview(s, 'again', 4);
+  recordReview(s, 'good', 5);
+  assert.equal(s.days[4].n, 2);
+  assert.equal(s.days[4].again, 1);
+  assert.equal(s.days[5].n, 1);
+  assert.equal(s.reviews, 3);
+});
+
+test('streak counts consecutive studied days up to today', () => {
+  const s = newStats();
+  for (const d of [8, 9, 10]) recordReview(s, 'good', d);
+  assert.equal(currentStreak(s, 10), 3);
+});
+
+test('an untouched today keeps yesterday\'s streak alive', () => {
+  const s = newStats();
+  recordReview(s, 'good', 9);
+  recordReview(s, 'good', 10);
+  assert.equal(currentStreak(s, 11), 2);
+});
+
+test('a missed day breaks the current streak', () => {
+  const s = newStats();
+  recordReview(s, 'good', 5);
+  recordReview(s, 'good', 6); // gap on 7, nothing today
+  assert.equal(currentStreak(s, 8), 0);
+});
+
+test('best streak is the longest run ever, across gaps', () => {
+  const s = newStats();
+  for (const d of [1, 2, 3]) recordReview(s, 'good', d);
+  for (const d of [10, 11]) recordReview(s, 'good', d);
+  assert.equal(bestStreak(s), 3);
+});
+
+test('retention is the share of non-again reviews, null when empty', () => {
+  const s = newStats();
+  assert.equal(retention(s), null);
+  recordReview(s, 'good', 1);
+  recordReview(s, 'good', 1);
+  recordReview(s, 'again', 1);
+  assert.ok(Math.abs(retention(s) - 2 / 3) < 1e-9);
 });

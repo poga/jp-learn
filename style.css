@@ -129,7 +129,36 @@ main.anki { max-width: 480px; }
 }
 .deck-bar label { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
 
+.streak { text-align: center; font-size: .95rem; margin: 0 0 .35rem; opacity: .85; }
 .stats { text-align: center; opacity: .6; font-size: .9rem; margin: 0 0 1.25rem; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+  margin: 1.5rem 0 1rem;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .7rem .25rem;
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+}
+.stat b { font-size: 1.25rem; }
+.stat span { font-size: .68rem; opacity: .55; }
+
+.progress {
+  height: .5rem;
+  background: var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+  margin: 1rem 0 .5rem;
+}
+.progress-fill { height: 100%; background: var(--good); transition: width .3s ease; }
+.progress-label { font-size: .8rem; opacity: .6; line-height: 1.5; margin: 0 0 1.5rem; }
 
 .card-stage { text-align: center; }
 .card {
