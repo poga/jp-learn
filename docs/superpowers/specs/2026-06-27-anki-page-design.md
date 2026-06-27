@@ -61,8 +61,10 @@ Constants: DEFAULT_EASE 2.5, MIN_EASE 1.3, EASY_BONUS 1.3.
 
 ## Persistence
 
-`localStorage['anki-srs-v1']` = `{ version, cards: { [id]: state } }`. Reads
-and writes live in `anki.js` so `srs.js` stays pure and node-testable.
+`localStorage['anki-srs-v1']` = `{ version, cards: { [id]: state } }`. The
+script toggle is saved separately as `localStorage['anki-deck-v1']` (an array
+like `["hira","kata"]`) and restored on load. Reads and writes live in
+`anki.js` so `srs.js` stays pure and node-testable.
 
 ## Testing
 

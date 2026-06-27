@@ -47,6 +47,20 @@ function deckCards() {
   return ids;
 }
 
+// Remember the script choice across reloads.
+const PREF_KEY = 'anki-deck-v1';
+function savePref() {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify(selectedScripts())); }
+  catch (e) {}
+}
+function applyPref() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(PREF_KEY)); } catch (e) {}
+  if (!Array.isArray(saved)) return;
+  for (const c of deckBar.querySelectorAll('input[name="script"]'))
+    c.checked = saved.includes(c.value);
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -160,7 +174,7 @@ cardEl.addEventListener('click', flip);
 gradesEl.querySelectorAll('button').forEach(b =>
   b.addEventListener('click', () => grade(b.dataset.grade)));
 deckBar.querySelectorAll('input').forEach(i =>
-  i.addEventListener('change', startSession));
+  i.addEventListener('change', () => { savePref(); startSession(); }));
 
 document.addEventListener('keydown', ev => {
   if (!doneEl.hidden) return;
@@ -173,4 +187,5 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === '3') grade('easy');
 });
 
+applyPref();
 startSession();
