@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五十音 アンキ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="anki-body">
+  <header>
+    <h1>五十音 アンキ</h1>
+    <nav class="page-nav"><a href="index.html">▸ 五十音 table</a></nav>
+  </header>
+
+  <main id="app" class="anki">
+    <div class="deck-bar" id="deck-bar">
+      <label><input type="checkbox" name="script" value="hira" checked> 平仮名</label>
+      <label><input type="checkbox" name="script" value="kata" checked> 片仮名</label>
+    </div>
+
+    <p class="stats" id="stats"></p>
+
+    <section class="card-stage" id="stage">
+      <div class="card" id="card" role="button" tabindex="0"
+           aria-label="flip card">
+        <span class="card-script" id="card-script"></span>
+        <span class="card-face" id="card-front"></span>
+        <span class="card-reading" id="card-reading"></span>
+      </div>
+
+      <div class="prompt-hint" id="hint">tap the card or press Space to flip</div>
+
+      <div class="grade-buttons" id="grades" hidden>
+        <button class="grade again" data-grade="again">
+          <span>Again</span><small id="iv-again"></small>
+        </button>
+        <button class="grade good" data-grade="good">
+          <span>Good</span><small id="iv-good"></small>
+        </button>
+        <button class="grade easy" data-grade="easy">
+          <span>Easy</span><small id="iv-easy"></small>
+        </button>
+      </div>
+    </section>
+
+    <section class="done" id="done" hidden></section>
+  </main>
+
+  <script src="kana.js"></script>
+  <script src="srs.js"></script>
+  <script src="anki.js"></script>
+</body>
+</html>

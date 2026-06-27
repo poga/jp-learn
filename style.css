@@ -103,3 +103,87 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
   transition: opacity .15s ease, transform .15s ease;
 }
 #toast.show { opacity: .95; transform: translate(-50%, 0); }
+
+/* ---------- anki practice page ---------- */
+:root {
+  --again: #e06a5a;
+  --good: #4a9d6e;
+  --easy: #5a86e0;
+}
+/* hidden must win over the display rules below (e.g. .grade-buttons:flex) */
+[hidden] { display: none !important; }
+.page-nav { font-size: .9rem; margin-bottom: 1rem; }
+.page-nav a { color: var(--match-line); text-decoration: none; opacity: .85; }
+.page-nav a:hover { text-decoration: underline; }
+main.anki { max-width: 480px; }
+
+.deck-bar {
+  display: flex;
+  justify-content: center;
+  gap: .5rem 1.2rem;
+  margin-bottom: 1.25rem;
+  font-size: .95rem;
+}
+.deck-bar label { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
+
+.stats { text-align: center; opacity: .6; font-size: .9rem; margin: 0 0 1.25rem; }
+
+.card-stage { text-align: center; }
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 14rem;
+  padding: 2rem 1rem;
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .1s ease, border-color .12s ease;
+}
+.card:hover { border-color: var(--match-line); }
+.card:active { transform: scale(.99); }
+.card-script { font-size: .8rem; letter-spacing: .12em; opacity: .4; }
+.card-face { font-size: 5.5rem; line-height: 1; }
+.card-reading {
+  font-size: 1.6rem;
+  letter-spacing: .06em;
+  color: var(--match-line);
+  opacity: 0;
+  transition: opacity .14s ease;
+}
+.card.flipped .card-reading { opacity: 1; }
+
+.prompt-hint { margin-top: 1rem; font-size: .85rem; opacity: .45; }
+
+.grade-buttons { display: flex; gap: .6rem; margin-top: 1.25rem; }
+.grade {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  padding: .7rem .5rem;
+  font: inherit;
+  font-size: 1rem;
+  color: #fff;
+  border: none;
+  border-radius: .6rem;
+  cursor: pointer;
+  transition: filter .12s ease, transform .1s ease;
+}
+.grade small { font-size: .75rem; opacity: .85; }
+.grade:hover { filter: brightness(1.08); }
+.grade:active { transform: scale(.96); }
+.grade.again { background: var(--again); }
+.grade.good { background: var(--good); }
+.grade.easy { background: var(--easy); }
+
+.done { text-align: center; padding: 2rem 0; }
+.done-mark { font-size: 2.5rem; margin-bottom: .5rem; letter-spacing: .1em; }
+.done-note { opacity: .6; margin: 0 0 1.5rem; }
+.done .grade { display: inline-block; flex: none; padding: .6rem 1.5rem; }
