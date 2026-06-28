@@ -4,7 +4,7 @@
 const STORE_KEY = 'anki-fsrs-v1';
 const STATS_KEY = 'anki-stats-v2';
 const PREF_KEY = 'anki-deck-v1';
-const NEW_PER_SESSION = 20;
+const NEW_PER_DAY = 20;
 const MATURE_DAYS = 21;
 
 // drop legacy SM-2 progress and stats (full reset on upgrade)
@@ -74,7 +74,7 @@ function applyPref() {
     c.checked = saved.includes(c.value);
 }
 
-let active = [], newSeen = 0, current = null, flipped = false, reviewed = 0;
+let active = [], current = null, flipped = false, reviewed = 0;
 let timer = null;
 
 function clearTimer() { if (timer) { clearInterval(timer); timer = null; } }
@@ -90,17 +90,18 @@ function shuffle(arr) {
 
 function buildSession() {
   active = shuffle(deckCards());
-  newSeen = 0; reviewed = 0;
+  reviewed = 0;
   next();
 }
 
-// next card to show, or a wait (ms) until the soonest learning card ripens.
+// next card to show, or the timestamp the soonest learning card ripens at.
 function pickDue(t) {
+  const canNew = newOn(stats, dayOf(t)) < NEW_PER_DAY;
   let due = null, dueAt = Infinity, fresh = null;
   for (const id of active) {
     const st = stateFor(id);
     if (st.state === 'new') {
-      if (fresh == null && newSeen < NEW_PER_SESSION) fresh = id;
+      if (fresh == null && canNew) fresh = id;
     } else if (st.due <= t && st.due < dueAt) { due = id; dueAt = st.due; }
   }
   if (due) return { id: due };
@@ -111,7 +112,7 @@ function pickDue(t) {
     if ((st.state === 'learning' || st.state === 'relearning') && st.due > t)
       soon = Math.min(soon, st.due);
   }
-  return soon < Infinity ? { wait: soon - t } : null;
+  return soon < Infinity ? { at: soon } : null;
 }
 
 function next() {
@@ -121,7 +122,7 @@ function next() {
   if (!pick) { current = null; return showDone(); }
   if (pick.id) { current = pick.id; return render(); }
   current = null;
-  showCountdown(pick.wait);
+  showCountdown(pick.at);
 }
 
 function fmtIv(ms) {
@@ -148,17 +149,18 @@ function render() {
   updateStats();
 }
 
-function showCountdown(ms) {
+// `at` is the wall-clock ms the card ripens. Each tick recomputes the remaining
+// time from the clock, so a suspended interval corrects itself on resume.
+function showCountdown(at) {
   stage.hidden = false; doneEl.hidden = true;
   cardEl.hidden = true; gradesEl.hidden = true; hintEl.hidden = true;
   countdownEl.hidden = false;
   updateStats();
-  let remain = Math.ceil(ms / 1000);
   const tick = () => {
+    const remain = Math.ceil((at - now()) / 1000);
     if (remain <= 0) { clearTimer(); return next(); }
     const m = Math.floor(remain / 60), s = String(remain % 60).padStart(2, '0');
     countdownEl.textContent = `next card in ${m}:${s}`;
-    remain--;
   };
   tick();
   timer = setInterval(tick, 1000);
@@ -178,7 +180,7 @@ function grade(g) {
   if (!flipped || !current) return;
   const before = stateFor(current);
   store[current] = schedule(before, g, now());
-  if (before.state === 'new') newSeen++;
+  if (before.state === 'new') recordNew(stats, dayOf(now()));
   recordReview(stats, g, dayOf(now()));
   saveStore(); saveStats();
   reviewed++;
@@ -196,7 +198,7 @@ function sessionCounts() {
     else if (st.state === 'learning' || st.state === 'relearning') learning++;
     else if (st.due <= t) due++;
   }
-  newLeft = Math.min(newLeft, Math.max(0, NEW_PER_SESSION - newSeen));
+  newLeft = Math.min(newLeft, Math.max(0, NEW_PER_DAY - newOn(stats, dayOf(t))));
   return { newLeft, learning, due };
 }
 
@@ -247,15 +249,20 @@ function statsPanel() {
 }
 
 // Earliest day the deck has anything to study, or null if fully buried.
+// New cards count for today only while the daily cap has room; once spent they
+// don't reopen until tomorrow.
 function nextDueDay() {
-  const t = now();
+  const t = now(), today = dayOf(t);
+  const canNew = newOn(stats, today) < NEW_PER_DAY;
   let min = null;
   for (const id of deckCards()) {
     const st = stateFor(id);
-    if (st.state === 'new') return dayOf(t);
-    if (st.due > t && (min == null || st.due < min)) min = st.due;
+    let d = null;
+    if (st.state === 'new') d = canNew ? today : today + 1;
+    else if (st.due > t) d = dayOf(st.due);
+    if (d != null && (min == null || d < min)) min = d;
   }
-  return min == null ? null : dayOf(min);
+  return min;
 }
 
 function showDone() {
@@ -301,6 +308,14 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === '2') grade('hard');
   else if (ev.key === '4') grade('easy');
 });
+
+// While counting down no card is up, so a foreground return re-picks: a card
+// that ripened while the app slept shows at once instead of after a stale tick.
+function resume() {
+  if (doneEl.hidden && !current) next();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
+window.addEventListener('pageshow', resume);
 
 applyPref();
 updateStreak();

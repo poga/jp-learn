@@ -1,8 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { matchRomaji, KANA, LAYOUT } = require('./kana.js');
-const { newStats, recordReview, currentStreak, bestStreak,
-  retention } = require('./stats.js');
+const { newStats, recordReview, recordNew, newOn, reviewsOn, currentStreak,
+  bestStreak, retention } = require('./stats.js');
 const fsrs = require('./fsrs.js');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -56,6 +56,24 @@ test('reviews bucket per day and split out lapses', () => {
   assert.equal(s.days[4].again, 1);
   assert.equal(s.days[5].n, 1);
   assert.equal(s.reviews, 3);
+});
+
+test('new-card introductions bucket per day so the cap resets at midnight', () => {
+  const s = newStats();
+  recordNew(s, 4);
+  recordNew(s, 4);
+  recordNew(s, 5);
+  assert.equal(newOn(s, 4), 2);
+  assert.equal(newOn(s, 5), 1);
+  assert.equal(newOn(s, 6), 0); // a fresh day starts at zero
+});
+
+test('new-card and review counts share a day bucket without clobbering', () => {
+  const s = newStats();
+  recordReview(s, 'good', 4);
+  recordNew(s, 4); // a new card's first grade records both
+  assert.equal(reviewsOn(s, 4), 1);
+  assert.equal(newOn(s, 4), 1);
 });
 
 test('streak counts consecutive studied days up to today', () => {

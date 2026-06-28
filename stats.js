@@ -20,6 +20,20 @@ function reviewsOn(stats, day) {
   return stats.days[day] ? stats.days[day].n : 0;
 }
 
+// Count a freshly-introduced new card for `today`. Drives the per-day new cap,
+// which resets at midnight because each day gets its own bucket.
+function recordNew(stats, today) {
+  const day = stats.days[today] || { n: 0, again: 0 };
+  day.new = (day.new || 0) + 1;
+  stats.days[today] = day;
+  return stats;
+}
+
+// New cards introduced on a given day.
+function newOn(stats, day) {
+  return stats.days[day] && stats.days[day].new ? stats.days[day].new : 0;
+}
+
 // Consecutive studied days ending today, or yesterday when today is untouched
 // so an unstarted day doesn't read as a broken streak.
 function currentStreak(stats, today) {
@@ -50,6 +64,6 @@ function retention(stats) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { newStats, recordReview, reviewsOn,
+  module.exports = { newStats, recordReview, recordNew, newOn, reviewsOn,
     currentStreak, bestStreak, retention };
 }
