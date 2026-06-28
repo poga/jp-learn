@@ -272,3 +272,33 @@ test('build: manifest is valid and its icons exist in dist', () => {
   const mani = JSON.parse(fs.readFileSync(path.join(DIST, ref), 'utf8'));
   for (const ic of mani.icons) assert.ok(fs.existsSync(path.join(DIST, ic.src)), `missing ${ic.src}`);
 });
+
+function swAssets() {
+  const src = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
+  return JSON.parse(src.match(/const ASSETS = (\[[\s\S]*?\]);/)[1]);
+}
+
+test('build: sw precaches exactly the dist files plus root', () => {
+  const onDisk = fs.readdirSync(DIST).filter(f => f !== 'sw.js');
+  const precached = new Set(swAssets());
+  assert.ok(precached.has('./'));
+  for (const f of onDisk) assert.ok(precached.has(f), `sw missing ${f}`);
+  for (const a of precached) if (a !== './')
+    assert.ok(onDisk.includes(a), `sw lists absent ${a}`);
+});
+
+test('build: sw is network-first for navigations, cache-first otherwise', () => {
+  const src = fs.readFileSync(path.join(DIST, 'sw.js'), 'utf8');
+  assert.match(src, /req\.mode === 'navigate'/);
+  assert.match(src, /caches\.match\('\.\/'\)/);
+  assert.match(src, /caches\.match\(req\)\.then\(hit => hit \|\| fetch\(req\)/);
+});
+
+test('build: both pages link manifest, apple-touch-icon, and a module script', () => {
+  for (const page of ['index.html', 'anki.html']) {
+    const html = fs.readFileSync(path.join(DIST, page), 'utf8');
+    assert.match(html, /rel="manifest"/);
+    assert.match(html, /rel="apple-touch-icon"/);
+    assert.match(html, /<script type="module"/);
+  }
+});
