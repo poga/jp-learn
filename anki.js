@@ -4,7 +4,7 @@
 const STORE_KEY = 'anki-fsrs-v1';
 const STATS_KEY = 'anki-stats-v2';
 const PREF_KEY = 'anki-deck-v1';
-const NEW_PER_DAY = 20;
+const NEW_PER_DAY = 40;
 const MATURE_DAYS = 21;
 
 // drop legacy SM-2 progress and stats (full reset on upgrade)

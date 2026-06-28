@@ -183,19 +183,20 @@ test('fsrs: applyFuzz stays inside the band', () => {
 
 const T = 1_700_000_000_000;
 
-test('fsrs: a new card enters learning; Good advances, Again resets', () => {
+test('fsrs: a new card graduates on Good; Again keeps it learning', () => {
   const good = fsrs.schedule(fsrs.newCard(), 'good', T);
-  assert.equal(good.state, 'learning');
-  assert.equal(good.due - T, fsrs.LEARN_STEPS[1]); // second step (10m)
+  assert.equal(good.state, 'review');
+  assert.ok(good.due - T >= fsrs.DAY_MS); // single step: Good goes straight to days
   const again = fsrs.schedule(fsrs.newCard(), 'again', T);
+  assert.equal(again.state, 'learning');
   assert.equal(again.due - T, fsrs.LEARN_STEPS[0]); // first step (1m)
 });
 
-test('fsrs: Good past the last learning step graduates to a day interval', () => {
-  const learning = fsrs.schedule(fsrs.newCard(), 'good', T); // at step 1
-  const grad = fsrs.schedule(learning, 'good', T + fsrs.LEARN_STEPS[1]);
+test('fsrs: Good graduates a lapsed-into-learning card to a day interval', () => {
+  const learning = fsrs.schedule(fsrs.newCard(), 'again', T); // learning, step 0
+  const grad = fsrs.schedule(learning, 'good', T + fsrs.LEARN_STEPS[0]);
   assert.equal(grad.state, 'review');
-  assert.ok(grad.due - (T + fsrs.LEARN_STEPS[1]) >= fsrs.DAY_MS);
+  assert.ok(grad.due - (T + fsrs.LEARN_STEPS[0]) >= fsrs.DAY_MS);
 });
 
 test('fsrs: Easy graduates a new card immediately', () => {

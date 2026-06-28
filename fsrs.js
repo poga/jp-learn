@@ -9,7 +9,7 @@ const DECAY = -W[20];
 const FACTOR = Math.pow(0.9, 1 / DECAY) - 1;
 const S_MIN = 0.001, S_MAX = 36500, D_MIN = 1, D_MAX = 10;
 const DAY_MS = 86400000, MIN_MS = 60000;
-const LEARN_STEPS = [1 * MIN_MS, 10 * MIN_MS];
+const LEARN_STEPS = [1 * MIN_MS];
 const RELEARN_STEPS = [10 * MIN_MS];
 const GRADES = { again: 1, hard: 2, good: 3, easy: 4 };
 
