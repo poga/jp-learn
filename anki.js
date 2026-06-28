@@ -79,8 +79,17 @@ let timer = null;
 
 function clearTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
+// Fisher-Yates; randomizes new-card order so the deck isn't strictly gojūon.
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function buildSession() {
-  active = deckCards();
+  active = shuffle(deckCards());
   newSeen = 0; reviewed = 0;
   next();
 }
