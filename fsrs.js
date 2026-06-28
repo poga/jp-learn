@@ -90,8 +90,7 @@ function applyFuzz(interval, rng) {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-// Next state with the review interval left UNFUZZED. Returns the card and the
-// graduated day-interval (or null) so schedule() can fuzz it.
+// Next state; days = unfuzzed graduated interval (or null) for schedule().
 function transition(card, grade, now) {
   const g = GRADES[grade];
   const from = card.state;

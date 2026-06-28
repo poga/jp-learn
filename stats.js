@@ -1,5 +1,5 @@
-// Study log: per-day review counts, streaks, retention. Pure, like srs.js.
-// Days are epoch day-numbers, the same unit as srs.js due/today.
+// Study log: per-day review counts, streaks, retention. Pure, no deps.
+// Days are epoch day-numbers (floor of ms/86400000), set by the page glue.
 
 function newStats() {
   return { reviews: 0, again: 0, days: {} };
