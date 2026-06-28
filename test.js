@@ -198,3 +198,11 @@ test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () =>
   const p = fsrs.previewIntervals(card, T);
   assert.ok(p.again < p.hard && p.hard < p.good && p.good < p.easy);
 });
+
+test('browser scripts share one global scope without redeclaration', () => {
+  const vm = require('node:vm');
+  const fs = require('node:fs');
+  const src = ['kana.js', 'fsrs.js', 'stats.js', 'anki.js']
+    .map(f => fs.readFileSync(`${__dirname}/${f}`, 'utf8')).join('\n;\n');
+  assert.doesNotThrow(() => new vm.Script(src));
+});

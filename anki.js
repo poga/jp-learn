@@ -6,7 +6,6 @@ const STATS_KEY = 'anki-stats-v2';
 const PREF_KEY = 'anki-deck-v1';
 const NEW_PER_SESSION = 20;
 const MATURE_DAYS = 21;
-const DAY_MS = 86400000;
 
 // drop legacy SM-2 progress and stats (full reset on upgrade)
 try { localStorage.removeItem('anki-srs-v1'); localStorage.removeItem('anki-stats-v1'); }
