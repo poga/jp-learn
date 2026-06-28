@@ -156,3 +156,21 @@ test('fsrs: a new card starts unseen', () => {
   assert.equal(c.state, 'new');
   assert.equal(c.reps, 0);
 });
+
+test('fsrs: initial stability rises with a better first grade', () => {
+  const s = [1, 2, 3, 4].map(g => fsrs.initStability(g));
+  assert.ok(s[0] < s[1] && s[1] < s[2] && s[2] < s[3]);
+});
+
+test('fsrs: initial difficulty is highest for Again, all within [1,10]', () => {
+  const d = [1, 2, 3, 4].map(g => fsrs.initDifficulty(g));
+  assert.ok(d[0] > d[3]);
+  for (const x of d) assert.ok(x >= 1 && x <= 10);
+});
+
+test('fsrs: Again raises difficulty, Easy lowers it, stays in [1,10]', () => {
+  assert.ok(fsrs.nextDifficulty(5, 1) > 5);
+  assert.ok(fsrs.nextDifficulty(5, 4) < 5);
+  assert.ok(fsrs.nextDifficulty(9.9, 1) <= 10);
+  assert.ok(fsrs.nextDifficulty(1.1, 4) >= 1);
+});

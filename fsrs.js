@@ -32,7 +32,26 @@ function nextInterval(S) {
   return clamp(Math.round(ivl), 1, S_MAX);
 }
 
+// Stability seeded by the first rating g (1..4).
+function initStability(g) {
+  return clamp(W[g - 1], S_MIN, S_MAX);
+}
+
+// Difficulty seeded by the first rating g; also the mean-reversion anchor.
+function initDifficulty(g) {
+  return clamp(W[4] - Math.exp(W[5] * (g - 1)) + 1, D_MIN, D_MAX);
+}
+
+// Difficulty after a rating, with linear damping and mean reversion.
+function nextDifficulty(D, g) {
+  const dD = -W[6] * (g - 3);
+  const damped = D + dD * (10 - D) / 9;
+  const reverted = W[7] * (initDifficulty(4) - damped) + damped;
+  return clamp(reverted, D_MIN, D_MAX);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { newCard, retrievability, nextInterval,
+    initStability, initDifficulty, nextDifficulty,
     DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
 }
