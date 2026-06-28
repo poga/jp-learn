@@ -72,9 +72,28 @@ function sameDayStability(S, g) {
   return clamp(g >= 2 ? S * Math.max(inc, 1) : S * inc, S_MIN, S_MAX);
 }
 
+const FUZZ_RANGES = [[2.5, 7, 0.15], [7, 20, 0.10], [20, Infinity, 0.05]];
+
+// Inclusive [min,max] day band Anki randomizes an interval within.
+function fuzzRange(interval) {
+  if (interval < 2.5) return { min: interval, max: interval };
+  let delta = 1;
+  for (const [start, end, f] of FUZZ_RANGES)
+    delta += f * Math.max(0, Math.min(interval, end) - start);
+  return { min: Math.max(1, Math.round(interval - delta)),
+    max: Math.round(interval + delta) };
+}
+
+// An integer interval picked from the fuzz band using rng in [0,1).
+function applyFuzz(interval, rng) {
+  const { min, max } = fuzzRange(interval);
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { newCard, retrievability, nextInterval,
     initStability, initDifficulty, nextDifficulty,
     successStability, lapseStability, sameDayStability,
+    fuzzRange, applyFuzz,
     DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
 }

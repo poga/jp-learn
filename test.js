@@ -191,3 +191,18 @@ test('fsrs: a same-day success does not shrink stability', () => {
   assert.ok(fsrs.sameDayStability(2, 3) >= 2);
   assert.ok(fsrs.sameDayStability(2, 4) >= 2);
 });
+
+test('fsrs: no fuzz below 2.5 days; band widens with interval', () => {
+  const small = fsrs.fuzzRange(2);
+  assert.equal(small.min, 2);
+  assert.equal(small.max, 2);
+  const w10 = fsrs.fuzzRange(10), w100 = fsrs.fuzzRange(100);
+  assert.ok(w10.min < 10 && w10.max > 10);
+  assert.ok((w100.max - w100.min) > (w10.max - w10.min));
+});
+
+test('fsrs: applyFuzz stays inside the band', () => {
+  const { min, max } = fsrs.fuzzRange(100);
+  assert.equal(fsrs.applyFuzz(100, () => 0), min);
+  assert.equal(fsrs.applyFuzz(100, () => 0.999999), max);
+});
