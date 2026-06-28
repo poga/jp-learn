@@ -4,6 +4,7 @@ const { matchRomaji, KANA, LAYOUT } = require('./kana.js');
 const { newCard, schedule, isDue, MIN_EASE } = require('./srs.js');
 const { newStats, recordReview, currentStreak, bestStreak,
   retention } = require('./stats.js');
+const fsrs = require('./fsrs.js');
 
 test('prefix match returns true for multiple on a single letter', () => {
   assert.equal(matchRomaji('k', { romaji: 'ka', aliases: [] }), true);
@@ -135,4 +136,23 @@ test('retention is the share of non-again reviews, null when empty', () => {
   recordReview(s, 'good', 1);
   recordReview(s, 'again', 1);
   assert.ok(Math.abs(retention(s) - 2 / 3) < 1e-9);
+});
+
+test('fsrs: retrievability is 0.9 at t = S and decays', () => {
+  for (const S of [1, 10, 100]) {
+    assert.ok(Math.abs(fsrs.retrievability(S, S) - 0.9) < 1e-6);
+  }
+  assert.ok(fsrs.retrievability(10, 1) > fsrs.retrievability(10, 30));
+});
+
+test('fsrs: nextInterval equals stability at 0.9 retention', () => {
+  assert.equal(fsrs.nextInterval(10), 10);
+  assert.equal(fsrs.nextInterval(1), 1);
+  assert.ok(fsrs.nextInterval(0.0001) >= 1); // clamped to >= 1 day
+});
+
+test('fsrs: a new card starts unseen', () => {
+  const c = fsrs.newCard();
+  assert.equal(c.state, 'new');
+  assert.equal(c.reps, 0);
 });
