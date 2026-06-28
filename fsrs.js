@@ -90,10 +90,93 @@ function applyFuzz(interval, rng) {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
+// Next state with the review interval left UNFUZZED. Returns the card and the
+// graduated day-interval (or null) so schedule() can fuzz it.
+function transition(card, grade, now) {
+  const g = GRADES[grade];
+  const from = card.state;
+  const c = { ...card, last_review: now };
+
+  if (from === 'new') {
+    c.stability = initStability(g);
+    c.difficulty = initDifficulty(g);
+  } else {
+    c.difficulty = nextDifficulty(card.difficulty, g);
+    if (from === 'review') {
+      const t = Math.max(0, (now - card.last_review) / DAY_MS);
+      const R = retrievability(card.stability, t);
+      c.stability = g === 1
+        ? lapseStability(card.stability, card.difficulty, R)
+        : successStability(card.stability, card.difficulty, R, g);
+    } else {
+      c.stability = sameDayStability(card.stability, g);
+    }
+  }
+
+  let days = null;
+  const graduate = () => {
+    c.state = 'review'; c.step = 0; c.reps = card.reps + 1;
+    days = nextInterval(c.stability);
+    c.due = now + days * DAY_MS;
+  };
+
+  if (g === 4 && from !== 'review') {
+    graduate();
+  } else if (from === 'new' || from === 'learning' || from === 'relearning') {
+    const steps = from === 'relearning' ? RELEARN_STEPS : LEARN_STEPS;
+    c.state = from === 'relearning' ? 'relearning' : 'learning';
+    const i = from === 'new' ? 0 : card.step;
+    if (g === 1) { c.step = 0; c.due = now + steps[0]; }
+    else if (g === 2) {
+      const delay = i + 1 < steps.length
+        ? (steps[i] + steps[i + 1]) / 2 : steps[i] * 1.5;
+      c.step = i; c.due = now + delay;
+    } else {
+      c.step = i + 1;
+      if (c.step >= steps.length) graduate();
+      else c.due = now + steps[c.step];
+    }
+  } else {
+    if (g === 1) {
+      c.state = 'relearning'; c.step = 0; c.lapses = card.lapses + 1;
+      c.due = now + RELEARN_STEPS[0];
+    } else {
+      c.state = 'review'; c.reps = card.reps + 1;
+      days = nextInterval(c.stability);
+      c.due = now + days * DAY_MS;
+    }
+  }
+  return { card: c, days };
+}
+
+// Apply a grade at timestamp now; review graduations are fuzzed via rng.
+function schedule(card, grade, now, rng = Math.random) {
+  const { card: c, days } = transition(card, grade, now);
+  if (days != null) c.due = now + applyFuzz(days, rng) * DAY_MS;
+  return c;
+}
+
+// Force the four projected intervals strictly increasing, like Anki.
+function monotone(iv) {
+  const order = ['again', 'hard', 'good', 'easy'];
+  for (let i = 1; i < order.length; i++) {
+    const prev = iv[order[i - 1]];
+    if (iv[order[i]] <= prev) iv[order[i]] = prev + (prev >= DAY_MS ? DAY_MS : MIN_MS);
+  }
+  return iv;
+}
+
+// Next-due deltas (ms) for each grade, unfuzzed and strictly increasing.
+function previewIntervals(card, now) {
+  const d = g => transition(card, g, now).card.due - now;
+  return monotone({ again: d('again'), hard: d('hard'),
+    good: d('good'), easy: d('easy') });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { newCard, retrievability, nextInterval,
+  module.exports = { newCard, schedule, previewIntervals,
+    retrievability, nextInterval, fuzzRange, applyFuzz,
     initStability, initDifficulty, nextDifficulty,
     successStability, lapseStability, sameDayStability,
-    fuzzRange, applyFuzz,
     DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
 }

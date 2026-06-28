@@ -206,3 +206,42 @@ test('fsrs: applyFuzz stays inside the band', () => {
   assert.equal(fsrs.applyFuzz(100, () => 0), min);
   assert.equal(fsrs.applyFuzz(100, () => 0.999999), max);
 });
+
+const T = 1_700_000_000_000;
+
+test('fsrs: a new card enters learning; Good advances, Again resets', () => {
+  const good = fsrs.schedule(fsrs.newCard(), 'good', T);
+  assert.equal(good.state, 'learning');
+  assert.equal(good.due - T, fsrs.LEARN_STEPS[1]); // second step (10m)
+  const again = fsrs.schedule(fsrs.newCard(), 'again', T);
+  assert.equal(again.due - T, fsrs.LEARN_STEPS[0]); // first step (1m)
+});
+
+test('fsrs: Good past the last learning step graduates to a day interval', () => {
+  const learning = fsrs.schedule(fsrs.newCard(), 'good', T); // at step 1
+  const grad = fsrs.schedule(learning, 'good', T + fsrs.LEARN_STEPS[1]);
+  assert.equal(grad.state, 'review');
+  assert.ok(grad.due - (T + fsrs.LEARN_STEPS[1]) >= fsrs.DAY_MS);
+});
+
+test('fsrs: Easy graduates a new card immediately', () => {
+  const easy = fsrs.schedule(fsrs.newCard(), 'easy', T);
+  assert.equal(easy.state, 'review');
+  assert.ok(easy.due - T >= fsrs.DAY_MS);
+});
+
+test('fsrs: Again on a review card lapses into relearning', () => {
+  const card = { state: 'review', stability: 20, difficulty: 5,
+    due: T, last_review: T - 20 * fsrs.DAY_MS, reps: 3, lapses: 0, step: 0 };
+  const lapsed = fsrs.schedule(card, 'again', T);
+  assert.equal(lapsed.state, 'relearning');
+  assert.equal(lapsed.lapses, 1);
+  assert.equal(lapsed.due - T, fsrs.RELEARN_STEPS[0]);
+});
+
+test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () => {
+  const card = { state: 'review', stability: 1, difficulty: 5,
+    due: T, last_review: T - fsrs.DAY_MS, reps: 2, lapses: 0, step: 0 };
+  const p = fsrs.previewIntervals(card, T);
+  assert.ok(p.again < p.hard && p.hard < p.good && p.good < p.easy);
+});
