@@ -152,6 +152,7 @@ function showCountdown(ms) {
   stage.hidden = false; doneEl.hidden = true;
   cardEl.hidden = true; gradesEl.hidden = true; hintEl.hidden = true;
   countdownEl.hidden = false;
+  updateStats();
   let remain = Math.ceil(ms / 1000);
   const tick = () => {
     if (remain <= 0) { clearTimer(); return next(); }
@@ -185,20 +186,25 @@ function grade(g) {
   next();
 }
 
-function sessionLeft() {
+// Anki-style remaining counts: new to introduce, in learning, reviews due now.
+function sessionCounts() {
   const t = now();
-  let dueCount = 0, fresh = 0;
+  let newLeft = 0, learning = 0, due = 0;
   for (const id of active) {
     const st = stateFor(id);
-    if (st.state === 'new') fresh++;
-    else if (st.state === 'learning' || st.state === 'relearning') dueCount++;
-    else if (st.due <= t) dueCount++;
+    if (st.state === 'new') newLeft++;
+    else if (st.state === 'learning' || st.state === 'relearning') learning++;
+    else if (st.due <= t) due++;
   }
-  return dueCount + Math.min(fresh, Math.max(0, NEW_PER_SESSION - newSeen));
+  newLeft = Math.min(newLeft, Math.max(0, NEW_PER_SESSION - newSeen));
+  return { newLeft, learning, due };
 }
 
 function updateStats() {
-  statsEl.textContent = `${reviewed} reviewed · ${sessionLeft()} left`;
+  const c = sessionCounts();
+  statsEl.innerHTML = `<span class="ct-new">${c.newLeft} new</span> · ` +
+    `<span class="ct-learn">${c.learning} learning</span> · ` +
+    `<span class="ct-due">${c.due} due</span>`;
 }
 
 function updateStreak() {

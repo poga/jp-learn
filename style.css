@@ -131,7 +131,10 @@ main.anki { max-width: 480px; }
 .deck-bar label { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; }
 
 .streak { text-align: center; font-size: .95rem; margin: 0 0 .35rem; opacity: .85; }
-.stats { text-align: center; opacity: .6; font-size: .9rem; margin: 0 0 1.25rem; }
+.stats { text-align: center; opacity: .85; font-size: .9rem; margin: 0 0 1.25rem; }
+.ct-new { color: var(--easy); }
+.ct-learn { color: var(--again); }
+.ct-due { color: var(--good); }
 
 .stat-grid {
   display: grid;
