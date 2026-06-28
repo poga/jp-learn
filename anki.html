@@ -31,9 +31,14 @@
 
       <div class="prompt-hint" id="hint">tap the card or press Space to flip</div>
 
+      <div class="prompt-hint" id="countdown" hidden></div>
+
       <div class="grade-buttons" id="grades" hidden>
         <button class="grade again" data-grade="again">
           <span>Again</span><small id="iv-again"></small>
+        </button>
+        <button class="grade hard" data-grade="hard">
+          <span>Hard</span><small id="iv-hard"></small>
         </button>
         <button class="grade good" data-grade="good">
           <span>Good</span><small id="iv-good"></small>
@@ -48,7 +53,7 @@
   </main>
 
   <script src="kana.js"></script>
-  <script src="srs.js"></script>
+  <script src="fsrs.js"></script>
   <script src="stats.js"></script>
   <script src="anki.js"></script>
 </body>

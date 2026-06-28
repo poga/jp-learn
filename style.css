@@ -110,6 +110,7 @@ h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 .75rem; opacity: .7; }
 /* ---------- anki practice page ---------- */
 :root {
   --again: #e06a5a;
+  --hard: #d99a3c;
   --good: #4a9d6e;
   --easy: #5a86e0;
 }
@@ -192,7 +193,7 @@ main.anki { max-width: 480px; }
 
 .prompt-hint { margin-top: 1rem; font-size: .85rem; opacity: .45; }
 
-.grade-buttons { display: flex; gap: .6rem; margin-top: 1.25rem; }
+.grade-buttons { display: flex; gap: .4rem; margin-top: 1.25rem; }
 .grade {
   flex: 1;
   display: flex;
@@ -212,6 +213,7 @@ main.anki { max-width: 480px; }
 .grade:hover { filter: brightness(1.08); }
 .grade:active { transform: scale(.96); }
 .grade.again { background: var(--again); }
+.grade.hard { background: var(--hard); }
 .grade.good { background: var(--good); }
 .grade.easy { background: var(--easy); }
 
