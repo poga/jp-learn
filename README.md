@@ -7,43 +7,29 @@ A small Japanese-kana learning PWA. Two pages, plain browser JS, no framework:
   (`anki.js` + `fsrs.js` + `stats.js`).
 
 `kana.js` and `fsrs.js` are pure (no DOM, no `localStorage`) and dual-export for
-Node tests. There is no bundler — pages run straight from the filesystem.
+Node tests.
 
-## Develop
+## Build
 
-Open `index.html` / `anki.html` via `file://`, or browse the served copy (below).
+`npm install` once, then:
+
+- `npm run build` — bundle + content-hash everything into `dist/`
+- `npm run dev` — rebuild `dist/` on every change in `src/`
+- `npm test` — run the test suite
+
+Sources live in `src/`; `dist/` is generated and gitignored.
 
 ## Test
 
 ```sh
-node test.js
+npm test
 ```
 
 `node:test` suite over the pure modules plus PWA invariants (manifest valid,
 every referenced asset precached, `sw.js` in sync with the build).
 
-## Service worker
-
-`sw.js` is generated — never edit it by hand. It derives the precache list from
-what the pages reference and stamps a content-hash version:
-
-```sh
-node build-sw.js
-```
-
-Run it after changing any precached asset (icons, css, js, html), so clients
-drop the stale cache. The pwa tests fail if `sw.js` is out of date.
-
 ## Deploy
 
-Served live on this machine by **Caddy** (config `/opt/homebrew/etc/Caddyfile`),
-`file_server` rooted directly at this repo, mounted at
-`https://dev.taileea02.ts.net/jp/`. The working tree **is** the live site.
-
-To deploy a change:
-
-1. Save the files in place.
-2. `node build-sw.js` (bump the SW precache version).
-3. Done — no upload, no Caddy restart.
-
-`git push` is backup only; GitHub Pages is not configured.
+Point Caddy's site root at `dist/` (not the repo root), then run
+`npm run build` in place. Hashed filenames make every asset immutable, so
+updates land without clearing caches; HTML is served network-first.
