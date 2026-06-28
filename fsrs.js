@@ -50,8 +50,31 @@ function nextDifficulty(D, g) {
   return clamp(reverted, D_MIN, D_MAX);
 }
 
+// Stability after a successful cross-day review (g >= 2). R = recall now.
+function successStability(S, D, R, g) {
+  const hard = g === 2 ? W[15] : 1;
+  const easy = g === 4 ? W[16] : 1;
+  const inc = Math.exp(W[8]) * (11 - D) * Math.pow(S, -W[9])
+    * (Math.exp(W[10] * (1 - R)) - 1) * hard * easy;
+  return clamp(S * (1 + inc), S_MIN, S_MAX);
+}
+
+// Stability after a lapse (g === 1); capped so it never rises above S.
+function lapseStability(S, D, R) {
+  const sFail = W[11] * Math.pow(D, -W[12])
+    * (Math.pow(S + 1, W[13]) - 1) * Math.exp(W[14] * (1 - R));
+  return clamp(Math.min(sFail, S / Math.exp(W[17] * W[18])), S_MIN, S_MAX);
+}
+
+// Stability after a same-day (learning/relearning) review.
+function sameDayStability(S, g) {
+  const inc = Math.exp(W[17] * (g - 3 + W[18])) * Math.pow(S, -W[19]);
+  return clamp(g >= 2 ? S * Math.max(inc, 1) : S * inc, S_MIN, S_MAX);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { newCard, retrievability, nextInterval,
     initStability, initDifficulty, nextDifficulty,
+    successStability, lapseStability, sameDayStability,
     DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
 }

@@ -174,3 +174,20 @@ test('fsrs: Again raises difficulty, Easy lowers it, stays in [1,10]', () => {
   assert.ok(fsrs.nextDifficulty(9.9, 1) <= 10);
   assert.ok(fsrs.nextDifficulty(1.1, 4) >= 1);
 });
+
+test('fsrs: success grows stability, more for Easy than Good than Hard', () => {
+  const hard = fsrs.successStability(10, 5, 0.9, 2);
+  const good = fsrs.successStability(10, 5, 0.9, 3);
+  const easy = fsrs.successStability(10, 5, 0.9, 4);
+  assert.ok(hard > 10 && hard < good && good < easy);
+});
+
+test('fsrs: a lapse never increases stability', () => {
+  assert.ok(fsrs.lapseStability(10, 5, 0.9) < 10);
+  assert.ok(fsrs.lapseStability(2, 8, 0.5) <= 2);
+});
+
+test('fsrs: a same-day success does not shrink stability', () => {
+  assert.ok(fsrs.sameDayStability(2, 3) >= 2);
+  assert.ok(fsrs.sameDayStability(2, 4) >= 2);
+});
