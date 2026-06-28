@@ -1,11 +1,14 @@
-import { test } from 'node:test';
+import { test, before } from 'node:test';
 import assert from 'node:assert';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import esbuild from 'esbuild';
 import { matchRomaji, KANA, LAYOUT } from './src/kana.js';
 import { newStats, recordReview, recordNew, newOn, reviewsOn, currentStreak,
   bestStreak, retention } from './src/stats.js';
 import * as fsrs from './src/fsrs.js';
+import { build } from './build.js';
 
 test('prefix match returns true for multiple on a single letter', () => {
   assert.equal(matchRomaji('k', { romaji: 'ka', aliases: [] }), true);
@@ -220,8 +223,6 @@ test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () =>
   assert.ok(p.again < p.hard && p.hard < p.good && p.good < p.easy);
 });
 
-import esbuild from 'esbuild';
-
 test('build: page entries bundle cleanly as ESM', async () => {
   const r = await esbuild.build({
     entryPoints: ['./src/script.js', './src/anki.js'],
@@ -229,4 +230,45 @@ test('build: page entries bundle cleanly as ESM', async () => {
     outdir: '/dev/null',
   });
   assert.equal(r.errors.length, 0);
+});
+
+const DIST = path.join(import.meta.dirname, 'dist');
+before(async () => { await build(); });
+
+function pageRefs(page) {
+  const html = fs.readFileSync(path.join(DIST, page), 'utf8');
+  return [...html.matchAll(/(?:href|src)="([^"]+)"/g)]
+    .map(m => m[1]).filter(u => !/^(https?:|data:|#|mailto:)/.test(u));
+}
+
+test('build: pages reference only files present in dist', () => {
+  for (const page of ['index.html', 'anki.html'])
+    for (const ref of pageRefs(page))
+      assert.ok(fs.existsSync(path.join(DIST, ref)), `${page} -> missing ${ref}`);
+});
+
+test('build: asset refs are content-hashed and match their content', () => {
+  for (const page of ['index.html', 'anki.html'])
+    for (const ref of pageRefs(page)) {
+      if (ref.endsWith('.html')) continue; // page-to-page nav links stay plain
+      const m = ref.match(/-([0-9a-f]{8})\.(js|css|png|svg|webmanifest)$/);
+      assert.ok(m, `${ref} is not hashed`);
+      const buf = fs.readFileSync(path.join(DIST, ref));
+      assert.equal(m[1], crypto.createHash('sha256').update(buf).digest('hex').slice(0, 8));
+    }
+});
+
+test('build: no bare asset names leak into HTML', () => {
+  const bare = ['style.css', 'script.js', 'anki.js', 'manifest.webmanifest',
+    'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon.svg'];
+  for (const page of ['index.html', 'anki.html']) {
+    const html = fs.readFileSync(path.join(DIST, page), 'utf8');
+    for (const b of bare) assert.ok(!html.includes(`"${b}"`), `${page} still references ${b}`);
+  }
+});
+
+test('build: manifest is valid and its icons exist in dist', () => {
+  const ref = pageRefs('anki.html').find(r => r.endsWith('.webmanifest'));
+  const mani = JSON.parse(fs.readFileSync(path.join(DIST, ref), 'utf8'));
+  for (const ic of mani.icons) assert.ok(fs.existsSync(path.join(DIST, ic.src)), `missing ${ic.src}`);
 });
