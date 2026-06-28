@@ -18,7 +18,8 @@ try { localStorage.removeItem('anki-srs-v1'); localStorage.removeItem('anki-stat
 catch (e) {}
 
 const now = () => Date.now();
-const dayOf = ms => Math.floor(ms / DAY_MS);
+// local-day index: shift by the zone offset so the day rolls at local midnight
+const dayOf = ms => Math.floor((ms - new Date(ms).getTimezoneOffset() * 60000) / DAY_MS);
 const byId = Object.fromEntries(KANA.map(e => [e.id, e]));
 
 function loadStore() {
