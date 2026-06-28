@@ -317,6 +317,25 @@ function resume() {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
 window.addEventListener('pageshow', resume);
 
+// Two-tap wipe: first tap arms, a second within the window clears all data.
+const resetBtn = $('reset');
+let resetArm = null;
+resetBtn.addEventListener('click', () => {
+  if (resetArm) {
+    clearTimeout(resetArm);
+    try { localStorage.clear(); } catch (e) {}
+    location.reload();
+    return;
+  }
+  resetBtn.classList.add('armed');
+  resetBtn.textContent = 'tap again to wipe';
+  resetArm = setTimeout(() => {
+    resetArm = null;
+    resetBtn.classList.remove('armed');
+    resetBtn.textContent = 'reset progress';
+  }, 3000);
+});
+
 applyPref();
 updateStreak();
 startSession();

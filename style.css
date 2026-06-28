@@ -224,3 +224,24 @@ main.anki { max-width: 480px; }
 .done-mark { font-size: 2.5rem; margin-bottom: .5rem; letter-spacing: .1em; }
 .done-note { opacity: .6; margin: 0 0 1.5rem; }
 .done .grade { display: inline-block; flex: none; padding: .6rem 1.5rem; }
+
+.app-footer { max-width: 480px; margin: 2.5rem auto 0; text-align: center; }
+.reset-btn {
+  font: inherit;
+  font-size: .8rem;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .4rem .9rem;
+  opacity: .5;
+  cursor: pointer;
+  transition: opacity .12s ease, color .12s ease, border-color .12s ease;
+}
+.reset-btn:hover { opacity: .8; }
+.reset-btn.armed {
+  color: #fff;
+  background: var(--again);
+  border-color: var(--again);
+  opacity: 1;
+}
