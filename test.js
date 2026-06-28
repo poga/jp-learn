@@ -219,3 +219,14 @@ test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () =>
   const p = fsrs.previewIntervals(card, T);
   assert.ok(p.again < p.hard && p.hard < p.good && p.good < p.easy);
 });
+
+import esbuild from 'esbuild';
+
+test('build: page entries bundle cleanly as ESM', async () => {
+  const r = await esbuild.build({
+    entryPoints: ['./src/script.js', './src/anki.js'],
+    bundle: true, write: false, format: 'esm', logLevel: 'silent',
+    outdir: '/dev/null',
+  });
+  assert.equal(r.errors.length, 0);
+});

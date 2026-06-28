@@ -1,3 +1,6 @@
+import { KANA, LAYOUT, matchRomaji } from './kana.js';
+import './pwa.js';
+
 const byId = Object.fromEntries(KANA.map(e => [e.id, e]));
 
 function makeCell(id, script) {

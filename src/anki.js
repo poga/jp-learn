@@ -1,3 +1,9 @@
+import { KANA } from './kana.js';
+import { newCard, schedule, previewIntervals, DAY_MS } from './fsrs.js';
+import { newStats, recordReview, recordNew, newOn, reviewsOn,
+  currentStreak, bestStreak, retention } from './stats.js';
+import './pwa.js';
+
 // Page glue around the pure fsrs.js scheduler: localStorage, the wall-clock
 // session queue with a learning countdown, and the flip/grade UI. Browser-only.
 
