@@ -4,6 +4,9 @@ const { matchRomaji, KANA, LAYOUT } = require('./kana.js');
 const { newStats, recordReview, currentStreak, bestStreak,
   retention } = require('./stats.js');
 const fsrs = require('./fsrs.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const buildSw = require('./build-sw.js');
 
 test('prefix match returns true for multiple on a single letter', () => {
   assert.equal(matchRomaji('k', { romaji: 'ka', aliases: [] }), true);
@@ -197,6 +200,46 @@ test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () =>
     due: T, last_review: T - fsrs.DAY_MS, reps: 2, lapses: 0, step: 0 };
   const p = fsrs.previewIntervals(card, T);
   assert.ok(p.again < p.hard && p.hard < p.good && p.good < p.easy);
+});
+
+// the shipped sw.js, with its precache list parsed back out
+function swAssets() {
+  const src = fs.readFileSync(`${__dirname}/sw.js`, 'utf8');
+  return JSON.parse(src.match(/const ASSETS = (\[[\s\S]*?\]);/)[1]);
+}
+function pageAssets() {
+  const out = new Set();
+  for (const page of ['index.html', 'anki.html']) {
+    const html = fs.readFileSync(`${__dirname}/${page}`, 'utf8');
+    for (const m of html.matchAll(/(?:href|src)="([^"]+)"/g))
+      if (!/^(https?:|data:|#|mailto:)/.test(m[1])) out.add(m[1]);
+  }
+  return [...out];
+}
+
+test('pwa: sw.js is up to date with the build (rerun node build-sw.js)', () => {
+  assert.equal(fs.readFileSync(`${__dirname}/sw.js`, 'utf8'), buildSw.buildSW());
+});
+
+test('pwa: every asset the pages reference is precached for offline', () => {
+  const cached = new Set(swAssets());
+  for (const a of pageAssets())
+    assert.ok(cached.has(a), `${a} is referenced but not in the sw precache`);
+});
+
+test('pwa: manifest is valid and points only at files that exist', () => {
+  const mani = JSON.parse(fs.readFileSync(`${__dirname}/manifest.webmanifest`, 'utf8'));
+  for (const rel of [mani.start_url, ...mani.icons.map(i => i.src)])
+    assert.ok(fs.existsSync(path.join(__dirname, rel)), `missing ${rel}`);
+});
+
+test('pwa: both pages register the worker and link the manifest', () => {
+  for (const page of ['index.html', 'anki.html']) {
+    const html = fs.readFileSync(`${__dirname}/${page}`, 'utf8');
+    assert.match(html, /rel="manifest"/);
+    assert.match(html, /src="pwa\.js"/);
+    assert.match(html, /rel="apple-touch-icon"/);
+  }
 });
 
 test('browser scripts share one global scope without redeclaration', () => {
