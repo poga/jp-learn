@@ -1,7 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { matchRomaji, KANA, LAYOUT } = require('./kana.js');
-const { newCard, schedule, isDue, MIN_EASE } = require('./srs.js');
 const { newStats, recordReview, currentStreak, bestStreak,
   retention } = require('./stats.js');
 const fsrs = require('./fsrs.js');
@@ -43,52 +42,6 @@ test('data is wired and ids are unique', () => {
     ...LAYOUT.yoonVoiced].flat().filter(Boolean);
   const known = new Set(ids);
   for (const id of layoutIds) assert.ok(known.has(id), `unknown id ${id}`);
-});
-
-test('first success graduates to 1 day (good) or 4 days (easy)', () => {
-  assert.equal(schedule(newCard(), 'good', 100).interval, 1);
-  assert.equal(schedule(newCard(), 'easy', 100).interval, 4);
-  assert.equal(schedule(newCard(), 'good', 100).due, 101);
-});
-
-test('review good multiplies interval by ease', () => {
-  const card = { ease: 2.5, interval: 10, reps: 2, due: 100, new: false };
-  const next = schedule(card, 'good', 100);
-  assert.equal(next.interval, 25); // 10 * 2.5
-  assert.equal(next.due, 125);
-  assert.equal(next.reps, 3);
-});
-
-test('easy raises ease and jumps further than good', () => {
-  const card = { ease: 2.5, interval: 10, reps: 2, due: 100, new: false };
-  const easy = schedule(card, 'easy', 100);
-  const good = schedule(card, 'good', 100);
-  assert.ok(easy.ease > 2.5);
-  assert.ok(easy.interval > good.interval);
-});
-
-test('again resets reps and lowers review ease, never below the floor', () => {
-  const card = { ease: 2.5, interval: 20, reps: 4, due: 100, new: false };
-  const next = schedule(card, 'again', 100);
-  assert.equal(next.reps, 0);
-  assert.equal(next.interval, 0);
-  assert.ok(next.ease < 2.5);
-  // repeated lapses clamp at the floor, not below
-  let c = card;
-  for (let i = 0; i < 20; i++) c = schedule({ ...c, reps: 4 }, 'again', 100);
-  assert.equal(c.ease, MIN_EASE);
-});
-
-test('again on a never-learned card keeps it due without penalizing ease', () => {
-  const next = schedule(newCard(), 'again', 100);
-  assert.equal(next.ease, 2.5);
-  assert.ok(isDue(next, 100));
-});
-
-test('new cards are always due; reviews due only on or after their date', () => {
-  assert.equal(isDue(newCard(), 0), true);
-  assert.equal(isDue({ new: false, due: 105 }, 100), false);
-  assert.equal(isDue({ new: false, due: 100 }, 100), true);
 });
 
 test('reviews bucket per day and split out lapses', () => {
