@@ -172,10 +172,8 @@ function previewIntervals(card, now) {
     good: d('good'), easy: d('easy') });
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { newCard, schedule, previewIntervals,
-    retrievability, nextInterval, fuzzRange, applyFuzz,
-    initStability, initDifficulty, nextDifficulty,
-    successStability, lapseStability, sameDayStability,
-    DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
-}
+export { newCard, schedule, previewIntervals,
+  retrievability, nextInterval, fuzzRange, applyFuzz,
+  initStability, initDifficulty, nextDifficulty,
+  successStability, lapseStability, sameDayStability,
+  DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };

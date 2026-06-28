@@ -63,7 +63,5 @@ function retention(stats) {
   return stats.reviews ? (stats.reviews - stats.again) / stats.reviews : null;
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { newStats, recordReview, recordNew, newOn, reviewsOn,
-    currentStreak, bestStreak, retention };
-}
+export { newStats, recordReview, recordNew, newOn, reviewsOn,
+  currentStreak, bestStreak, retention };

@@ -176,6 +176,4 @@ function matchRomaji(query, entry) {
   return entry.aliases.some(a => a.startsWith(q));
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { KANA, LAYOUT, matchRomaji };
-}
+export { KANA, LAYOUT, matchRomaji };
