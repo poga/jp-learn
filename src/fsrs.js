@@ -1,6 +1,9 @@
 // FSRS-6 spaced repetition. Pure. Browser global + node.
 // due/last_review are epoch-ms; review intervals are whole days.
 
+import { dayOf, dayStart } from './day.js';
+import { DEFAULT_CONFIG } from './config.js';
+
 const W = [0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001,
   1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014,
   1.8729, 0.5425, 0.0912, 0.0658, 0.1542];
@@ -9,8 +12,6 @@ const DECAY = -W[20];
 const FACTOR = Math.pow(0.9, 1 / DECAY) - 1;
 const S_MIN = 0.001, S_MAX = 36500, D_MIN = 1, D_MAX = 10;
 const DAY_MS = 86400000, MIN_MS = 60000;
-const LEARN_STEPS = [1 * MIN_MS];
-const RELEARN_STEPS = [10 * MIN_MS];
 const GRADES = { again: 1, hard: 2, good: 3, easy: 4 };
 
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
@@ -26,9 +27,9 @@ function retrievability(S, t) {
   return Math.pow(1 + FACTOR * t / S, DECAY);
 }
 
-// Whole days until recall drops to DESIRED_RETENTION; equals S at 0.9.
-function nextInterval(S) {
-  const ivl = (S / FACTOR) * (Math.pow(DESIRED_RETENTION, 1 / DECAY) - 1);
+// Whole days until recall drops to `retention`; equals S at 0.9.
+function nextInterval(S, retention = DESIRED_RETENTION) {
+  const ivl = (S / FACTOR) * (Math.pow(retention, 1 / DECAY) - 1);
   return clamp(Math.round(ivl), 1, S_MAX);
 }
 
@@ -90,8 +91,7 @@ function applyFuzz(interval, rng) {
   return min + Math.floor(rng() * (max - min + 1));
 }
 
-// Next state; days = unfuzzed graduated interval (or null) for schedule().
-function transition(card, grade, now) {
+function transition(card, grade, now, cfg = DEFAULT_CONFIG) {
   const g = GRADES[grade];
   const from = card.state;
   const c = { ...card, last_review: now };
@@ -115,14 +115,15 @@ function transition(card, grade, now) {
   let days = null;
   const graduate = () => {
     c.state = 'review'; c.step = 0; c.reps = card.reps + 1;
-    days = nextInterval(c.stability);
+    days = nextInterval(c.stability, cfg.desiredRetention);
     c.due = now + days * DAY_MS;
   };
 
   if (g === 4 && from !== 'review') {
     graduate();
   } else if (from === 'new' || from === 'learning' || from === 'relearning') {
-    const steps = from === 'relearning' ? RELEARN_STEPS : LEARN_STEPS;
+    const mins = from === 'relearning' ? cfg.relearnSteps : cfg.learnSteps;
+    const steps = mins.map(m => m * MIN_MS);
     c.state = from === 'relearning' ? 'relearning' : 'learning';
     const i = from === 'new' ? 0 : card.step;
     if (g === 1) { c.step = 0; c.due = now + steps[0]; }
@@ -138,20 +139,23 @@ function transition(card, grade, now) {
   } else {
     if (g === 1) {
       c.state = 'relearning'; c.step = 0; c.lapses = card.lapses + 1;
-      c.due = now + RELEARN_STEPS[0];
+      c.due = now + cfg.relearnSteps[0] * MIN_MS;
     } else {
       c.state = 'review'; c.reps = card.reps + 1;
-      days = nextInterval(c.stability);
+      days = nextInterval(c.stability, cfg.desiredRetention);
       c.due = now + days * DAY_MS;
     }
   }
   return { card: c, days };
 }
 
-// Apply a grade at timestamp now; review graduations are fuzzed via rng.
-function schedule(card, grade, now, rng = Math.random) {
-  const { card: c, days } = transition(card, grade, now);
-  if (days != null) c.due = now + applyFuzz(days, rng) * DAY_MS;
+// Apply a grade at `now`; review graduations are fuzzed and dued by study-day.
+function schedule(card, grade, now, cfg = DEFAULT_CONFIG, rng = Math.random) {
+  const { card: c, days } = transition(card, grade, now, cfg);
+  if (days != null) {
+    const day = dayOf(now, cfg.rolloverHour) + applyFuzz(days, rng);
+    c.due = dayStart(day, cfg.rolloverHour);
+  }
   return c;
 }
 
@@ -165,9 +169,9 @@ function monotone(iv) {
   return iv;
 }
 
-// Next-due deltas (ms) for each grade, unfuzzed and strictly increasing.
-function previewIntervals(card, now) {
-  const d = g => transition(card, g, now).card.due - now;
+// Next-due deltas (ms) per grade, unfuzzed and strictly increasing.
+function previewIntervals(card, now, cfg = DEFAULT_CONFIG) {
+  const d = g => transition(card, g, now, cfg).card.due - now;
   return monotone({ again: d('again'), hard: d('hard'),
     good: d('good'), easy: d('easy') });
 }
@@ -176,4 +180,4 @@ export { newCard, schedule, previewIntervals,
   retrievability, nextInterval, fuzzRange, applyFuzz,
   initStability, initDifficulty, nextDifficulty,
   successStability, lapseStability, sameDayStability,
-  DAY_MS, MIN_MS, LEARN_STEPS, RELEARN_STEPS };
+  DAY_MS, MIN_MS };
