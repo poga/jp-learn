@@ -445,3 +445,36 @@ test('queue: counts are limit-capped and agree with the queue', () => {
   assert.equal(c.learning, 1);
   assert.equal(c.due, 2);                                   // 3 due reviews capped at 2
 });
+
+import { DEFAULT_CONFIG, parseSteps, formatSteps, normalizeConfig } from './src/config.js';
+
+test('config: parseSteps reads space-separated positive minutes, else empty', () => {
+  assert.deepEqual(parseSteps('1 10'), [1, 10]);
+  assert.deepEqual(parseSteps('1  10'), [1, 10]);
+  assert.deepEqual(parseSteps('  '), []);
+  assert.deepEqual(parseSteps('x'), []);
+  assert.deepEqual(parseSteps('1 -5 10'), [1, 10]);   // drops non-positive
+});
+
+test('config: formatSteps round-trips with parseSteps', () => {
+  assert.equal(formatSteps([1, 10]), '1 10');
+  assert.deepEqual(parseSteps(formatSteps([1, 10, 60])), [1, 10, 60]);
+});
+
+test('config: normalizeConfig clamps each field to its valid range', () => {
+  assert.equal(normalizeConfig({ desiredRetention: 1.5 }).desiredRetention, 0.97);
+  assert.equal(normalizeConfig({ desiredRetention: 0.1 }).desiredRetention, 0.80);
+  assert.equal(normalizeConfig({ newPerDay: -5 }).newPerDay, 0);
+  assert.equal(normalizeConfig({ newPerDay: 12.6 }).newPerDay, 13);   // rounded int
+  assert.equal(normalizeConfig({ rolloverHour: 30 }).rolloverHour, 23);
+  assert.deepEqual(normalizeConfig({ learnSteps: [] }).learnSteps, DEFAULT_CONFIG.learnSteps);
+  assert.deepEqual(normalizeConfig({ learnSteps: [0, -1] }).learnSteps, DEFAULT_CONFIG.learnSteps);
+});
+
+test('config: normalizeConfig merges a partial blob over defaults', () => {
+  const c = normalizeConfig({ newPerDay: 30 });
+  assert.equal(c.newPerDay, 30);
+  assert.equal(c.reviewsPerDay, DEFAULT_CONFIG.reviewsPerDay);
+  assert.equal(c.rolloverHour, DEFAULT_CONFIG.rolloverHour);
+  assert.equal(c.learnAheadMins, DEFAULT_CONFIG.learnAheadMins);
+});
