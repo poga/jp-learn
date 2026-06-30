@@ -1,16 +1,18 @@
 import { KANA } from './kana.js';
 import { newCard, schedule, previewIntervals, DAY_MS } from './fsrs.js';
-import { newStats, recordReview, recordNew, newOn, reviewsOn,
+import { newStats, recordReview, recordNew, reviewsOn, revDoneOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
+import { pickNext, counts as queueCounts } from './queue.js';
+import { dayOf } from './day.js';
+import { DEFAULT_CONFIG } from './config.js';
 import './pwa.js';
 
-// Page glue around the pure fsrs.js scheduler: localStorage, the wall-clock
-// session queue with a learning countdown, and the flip/grade UI. Browser-only.
+// Page glue: localStorage, flip/grade UI, drives the pure queue. Browser-only.
 
 const STORE_KEY = 'anki-fsrs-v1';
 const STATS_KEY = 'anki-stats-v2';
 const PREF_KEY = 'anki-deck-v1';
-const NEW_PER_DAY = 40;
+const CONFIG = DEFAULT_CONFIG;
 const MATURE_DAYS = 21;
 
 // drop legacy SM-2 progress and stats (full reset on upgrade)
@@ -18,8 +20,7 @@ try { localStorage.removeItem('anki-srs-v1'); localStorage.removeItem('anki-stat
 catch (e) {}
 
 const now = () => Date.now();
-// local-day index: shift by the zone offset so the day rolls at local midnight
-const dayOf = ms => Math.floor((ms - new Date(ms).getTimezoneOffset() * 60000) / DAY_MS);
+const today = () => dayOf(now(), CONFIG.rolloverHour);
 const byId = Object.fromEntries(KANA.map(e => [e.id, e]));
 
 function loadStore() {
@@ -51,7 +52,7 @@ function parseCard(id) {
 
 const $ = id => document.getElementById(id);
 const deckBar = $('deck-bar'), statsEl = $('stats'), streakEl = $('streak');
-const stage = $('stage'), countdownEl = $('countdown');
+const stage = $('stage');
 const doneEl = $('done'), cardEl = $('card'), hintEl = $('hint');
 const gradesEl = $('grades'), scriptEl = $('card-script');
 const frontEl = $('card-front'), readingEl = $('card-reading');
@@ -82,9 +83,6 @@ function applyPref() {
 }
 
 let active = [], current = null, flipped = false, reviewed = 0;
-let timer = null;
-
-function clearTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
 // Fisher-Yates; randomizes new-card order so the deck isn't strictly gojūon.
 function shuffle(arr) {
@@ -101,35 +99,17 @@ function buildSession() {
   next();
 }
 
-// next card to show, or the timestamp the soonest learning card ripens at.
-function pickDue(t) {
-  const canNew = newOn(stats, dayOf(t)) < NEW_PER_DAY;
-  let due = null, dueAt = Infinity, fresh = null;
-  for (const id of active) {
-    const st = stateFor(id);
-    if (st.state === 'new') {
-      if (fresh == null && canNew) fresh = id;
-    } else if (st.due <= t && st.due < dueAt) { due = id; dueAt = st.due; }
-  }
-  if (due) return { id: due };
-  if (fresh) return { id: fresh };
-  let soon = Infinity;
-  for (const id of active) {
-    const st = stateFor(id);
-    if ((st.state === 'learning' || st.state === 'relearning') && st.due > t)
-      soon = Math.min(soon, st.due);
-  }
-  return soon < Infinity ? { at: soon } : null;
+// All deck cards as {id, ...state} for the pure queue.
+function sessionCards() {
+  return active.map(id => ({ id, ...stateFor(id) }));
 }
 
 function next() {
   flipped = false;
-  clearTimer();
-  const pick = pickDue(now());
-  if (!pick) { current = null; return showDone(); }
-  if (pick.id) { current = pick.id; return render(); }
+  const pick = pickNext({ cards: sessionCards(), stats, config: CONFIG, now: now() });
+  if (pick.kind === 'card') { current = pick.id; return render(); }
   current = null;
-  showCountdown(pick.at);
+  showDone(pick);
 }
 
 function fmtIv(ms) {
@@ -144,7 +124,6 @@ function fmtIv(ms) {
 }
 
 function render() {
-  countdownEl.hidden = true;
   cardEl.hidden = false;
   const { e, script, glyph } = parseCard(current);
   scriptEl.textContent = script === 'hira' ? 'ひらがな' : 'カタカナ';
@@ -154,23 +133,6 @@ function render() {
   gradesEl.hidden = true;
   hintEl.hidden = false;
   updateStats();
-}
-
-// `at` is the wall-clock ms the card ripens. Each tick recomputes the remaining
-// time from the clock, so a suspended interval corrects itself on resume.
-function showCountdown(at) {
-  stage.hidden = false; doneEl.hidden = true;
-  cardEl.hidden = true; gradesEl.hidden = true; hintEl.hidden = true;
-  countdownEl.hidden = false;
-  updateStats();
-  const tick = () => {
-    const remain = Math.ceil((at - now()) / 1000);
-    if (remain <= 0) { clearTimer(); return next(); }
-    const m = Math.floor(remain / 60), s = String(remain % 60).padStart(2, '0');
-    countdownEl.textContent = `next card in ${m}:${s}`;
-  };
-  tick();
-  timer = setInterval(tick, 1000);
 }
 
 function flip() {
@@ -186,39 +148,27 @@ function flip() {
 function grade(g) {
   if (!flipped || !current) return;
   const before = stateFor(current);
-  store[current] = schedule(before, g, now());
-  if (before.state === 'new') recordNew(stats, dayOf(now()));
-  recordReview(stats, g, dayOf(now()));
+  store[current] = schedule(before, g, now(), CONFIG);
+  const day = today();
+  if (before.state === 'new') recordNew(stats, day);
+  recordReview(stats, g, day, before.state === 'review');
+  recordLog(stats, { id: current, t: now(), grade: g, state: before.state });
   saveStore(); saveStats();
   reviewed++;
   updateStreak();
   next();
 }
 
-// Anki-style remaining counts: new to introduce, in learning, reviews due now.
-function sessionCounts() {
-  const t = now();
-  let newLeft = 0, learning = 0, due = 0;
-  for (const id of active) {
-    const st = stateFor(id);
-    if (st.state === 'new') newLeft++;
-    else if (st.state === 'learning' || st.state === 'relearning') learning++;
-    else if (st.due <= t) due++;
-  }
-  newLeft = Math.min(newLeft, Math.max(0, NEW_PER_DAY - newOn(stats, dayOf(t))));
-  return { newLeft, learning, due };
-}
-
 function updateStats() {
-  const c = sessionCounts();
+  const c = queueCounts({ cards: sessionCards(), stats, config: CONFIG, now: now() });
   statsEl.innerHTML = `<span class="ct-new">${c.newLeft} new</span> · ` +
     `<span class="ct-learn">${c.learning} learning</span> · ` +
     `<span class="ct-due">${c.due} due</span>`;
 }
 
 function updateStreak() {
-  const today = dayOf(now());
-  const cur = currentStreak(stats, today), done = reviewsOn(stats, today);
+  const t = today();
+  const cur = currentStreak(stats, t), done = reviewsOn(stats, t);
   streakEl.textContent = cur > 0
     ? `🔥 ${cur}-day streak${done ? ` · ${done} today` : ''}`
     : 'study today to start a streak';
@@ -238,16 +188,16 @@ function deckBreakdown() {
 }
 
 function statsPanel() {
-  const today = dayOf(now());
+  const t = today();
   const ret = retention(stats);
   const retTxt = ret == null ? '—' : Math.round(ret * 100) + '%';
   const bd = deckBreakdown();
   const learned = bd.learning + bd.mature;
   const pct = bd.total ? Math.round(learned / bd.total * 100) : 0;
   return `<div class="stat-grid">
-      <div class="stat"><b>🔥 ${currentStreak(stats, today)}</b><span>day streak</span></div>
+      <div class="stat"><b>🔥 ${currentStreak(stats, t)}</b><span>day streak</span></div>
       <div class="stat"><b>${bestStreak(stats)}</b><span>best</span></div>
-      <div class="stat"><b>${reviewsOn(stats, today)}</b><span>today</span></div>
+      <div class="stat"><b>${reviewsOn(stats, t)}</b><span>today</span></div>
       <div class="stat"><b>${retTxt}</b><span>retention</span></div>
     </div>
     <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -255,33 +205,17 @@ function statsPanel() {
       ${bd.fresh} new · ${bd.learning} learning · ${bd.mature} mature</p>`;
 }
 
-// Earliest day the deck has anything to study, or null if fully buried.
-// New cards count for today only while the daily cap has room; once spent they
-// don't reopen until tomorrow.
-function nextDueDay() {
-  const t = now(), today = dayOf(t);
-  const canNew = newOn(stats, today) < NEW_PER_DAY;
-  let min = null;
-  for (const id of deckCards()) {
-    const st = stateFor(id);
-    let d = null;
-    if (st.state === 'new') d = canNew ? today : today + 1;
-    else if (st.due > t) d = dayOf(st.due);
-    if (d != null && (min == null || d < min)) min = d;
-  }
-  return min;
-}
-
-function showDone() {
-  clearTimer();
+function showDone(done = { learning: 0, dueDay: null }) {
   stage.hidden = true; doneEl.hidden = false;
   if (deckCards().length === 0) {
     doneEl.innerHTML = '<p class="done-note">tick 平仮名 or 片仮名 above.</p>';
     return;
   }
-  const today = dayOf(now()), upcoming = nextDueDay();
-  const days = upcoming == null || upcoming <= today ? 0 : upcoming - today;
-  const when = days > 0 ? ` Next due in ${days} day${days > 1 ? 's' : ''}.` : '';
+  const t = today();
+  const days = done.dueDay == null || done.dueDay <= t ? 0 : done.dueDay - t;
+  const when = days > 0 ? ` Next due in ${days} day${days > 1 ? 's' : ''}.`
+    : done.learning > 0
+      ? ` ${done.learning} still in learning — come back soon.` : '';
   const head = reviewed > 0 ? '完了' : 'all caught up';
   const body = reviewed > 0
     ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${when}`
@@ -293,7 +227,6 @@ function showDone() {
 }
 
 function startSession() {
-  clearTimer();
   stage.hidden = false; doneEl.hidden = true;
   buildSession();
 }
@@ -316,8 +249,7 @@ document.addEventListener('keydown', ev => {
   else if (ev.key === '4') grade('easy');
 });
 
-// While counting down no card is up, so a foreground return re-picks: a card
-// that ripened while the app slept shows at once instead of after a stale tick.
+// On foreground return re-pick: a learning card that ripened while asleep shows at once.
 function resume() {
   if (doneEl.hidden && !current) next();
 }
