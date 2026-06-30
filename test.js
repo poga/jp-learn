@@ -455,6 +455,8 @@ test('queue: cramAdvance drops the front card; Again re-drills it at the back', 
   q = cramAdvance(q, 'good');    // ['a']
   q = cramAdvance(q, 'good');    // []
   assert.deepEqual(q, []);       // drains to empty
+  assert.deepEqual(cramAdvance([], 'again'), []);   // empty queue stays empty
+  assert.deepEqual(cramAdvance([], 'good'), []);
 });
 
 test('queue: raising newPerDay past the spent cap reopens new cards (study more)', () => {

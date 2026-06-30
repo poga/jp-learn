@@ -9,6 +9,7 @@ const isLearn = s => s === 'learning' || s === 'relearning';
 
 // Cram drill step: drop the front card, or re-drill it at the back on Again.
 function cramAdvance(queue, grade) {
+  if (!queue.length) return queue;
   const [head, ...rest] = queue;
   return grade === 'again' ? [...rest, head] : rest;
 }
