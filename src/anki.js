@@ -4,7 +4,7 @@ import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
 import { pickNext, counts as queueCounts } from './queue.js';
 import { dayOf } from './day.js';
-import { DEFAULT_CONFIG, normalizeConfig, parseSteps, formatSteps } from './config.js';
+import { normalizeConfig, parseSteps, formatSteps } from './config.js';
 import './pwa.js';
 
 // Page glue: localStorage, flip/grade UI, drives the pure queue. Browser-only.

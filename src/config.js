@@ -27,13 +27,14 @@ const clampInt = (n, lo, hi) => Math.min(hi, Math.max(lo, Math.round(Number(n)))
 // Merge raw over the defaults, clamping every exposed field to a valid value.
 function normalizeConfig(raw = {}) {
   const c = { ...DEFAULT_CONFIG, ...raw };
-  const learn = Array.isArray(c.learnSteps) ? c.learnSteps.filter(n => n > 0) : [];
-  const relearn = Array.isArray(c.relearnSteps) ? c.relearnSteps.filter(n => n > 0) : [];
+  const ok = n => Number.isFinite(n) && n > 0;
+  const learn = Array.isArray(c.learnSteps) ? c.learnSteps.filter(ok) : [];
+  const relearn = Array.isArray(c.relearnSteps) ? c.relearnSteps.filter(ok) : [];
   return {
     newPerDay: isNaN(c.newPerDay) ? DEFAULT_CONFIG.newPerDay : clampInt(c.newPerDay, 0, 9999),
     reviewsPerDay: isNaN(c.reviewsPerDay) ? DEFAULT_CONFIG.reviewsPerDay : clampInt(c.reviewsPerDay, 0, 9999),
-    learnSteps: learn.length ? learn : DEFAULT_CONFIG.learnSteps,
-    relearnSteps: relearn.length ? relearn : DEFAULT_CONFIG.relearnSteps,
+    learnSteps: learn.length ? learn : DEFAULT_CONFIG.learnSteps.slice(),
+    relearnSteps: relearn.length ? relearn : DEFAULT_CONFIG.relearnSteps.slice(),
     desiredRetention: isNaN(c.desiredRetention) ? DEFAULT_CONFIG.desiredRetention
       : Math.min(0.97, Math.max(0.80, Number(c.desiredRetention))),
     rolloverHour: isNaN(c.rolloverHour) ? DEFAULT_CONFIG.rolloverHour : clampInt(c.rolloverHour, 0, 23),
