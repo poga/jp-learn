@@ -363,7 +363,7 @@ test('day: a review due-dated to tomorrow surfaces only next study-day', () => {
   assert.equal(dayOf(due, 4), dayOf(T, 4) + 1);
 });
 
-import { pickNext, counts } from './src/queue.js';
+import { pickNext, counts, cramAdvance } from './src/queue.js';
 
 const QDAY = 20000;
 const QNOW = dayStart(QDAY, 4) + 12 * 3600000; // midday on study-day 20000
@@ -444,6 +444,27 @@ test('queue: counts are limit-capped and agree with the queue', () => {
   assert.equal(c.newLeft, 1);                               // cap 2 minus 1 used
   assert.equal(c.learning, 1);
   assert.equal(c.due, 2);                                   // 3 due reviews capped at 2
+});
+
+test('queue: cramAdvance drops the front card; Again re-drills it at the back', () => {
+  assert.deepEqual(cramAdvance(['a', 'b', 'c'], 'good'), ['b', 'c']);
+  assert.deepEqual(cramAdvance(['a', 'b', 'c'], 'easy'), ['b', 'c']);
+  assert.deepEqual(cramAdvance(['a', 'b', 'c'], 'again'), ['b', 'c', 'a']);
+  let q = ['a', 'b'];
+  q = cramAdvance(q, 'again');   // ['b','a'] — re-drill a
+  q = cramAdvance(q, 'good');    // ['a']
+  q = cramAdvance(q, 'good');    // []
+  assert.deepEqual(q, []);       // drains to empty
+});
+
+test('queue: raising newPerDay past the spent cap reopens new cards (study more)', () => {
+  const stats = newStats();
+  recordNew(stats, QDAY); recordNew(stats, QDAY);   // 2 new done == base cap (cfg.newPerDay is 2)
+  const cards = [newC('n1')];
+  assert.equal(pickNext({ cards, stats, config: cfg, now: QNOW }).kind, 'done'); // cap spent
+  const bumped = { ...cfg, newPerDay: cfg.newPerDay + 10 };
+  assert.deepEqual(pickNext({ cards, stats, config: bumped, now: QNOW }),
+    { kind: 'card', id: 'n1' });                     // bump reopens the new card
 });
 
 import { DEFAULT_CONFIG, parseSteps, formatSteps, normalizeConfig } from './src/config.js';

@@ -7,6 +7,12 @@ import { DEFAULT_CONFIG } from './config.js';
 
 const isLearn = s => s === 'learning' || s === 'relearning';
 
+// Cram drill step: drop the front card, or re-drill it at the back on Again.
+function cramAdvance(queue, grade) {
+  const [head, ...rest] = queue;
+  return grade === 'again' ? [...rest, head] : rest;
+}
+
 // Split the deck relative to `now`/`today` into the queues the picker draws from.
 function partition(cards, cfg, now, today) {
   const readyLearn = [], pendingLearn = [], fresh = [], dueRev = [];
@@ -76,4 +82,4 @@ function counts({ cards, stats, config = DEFAULT_CONFIG, now }) {
   };
 }
 
-export { pickNext, counts };
+export { pickNext, counts, cramAdvance };
