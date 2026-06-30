@@ -264,3 +264,4 @@ main.anki { max-width: 480px; }
   cursor: pointer; opacity: .7;
 }
 .opt-btn:hover { opacity: 1; }
+.done .grade { display: block; width: 100%; max-width: 16rem; margin: .5rem auto 0; }

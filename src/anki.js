@@ -2,7 +2,7 @@ import { KANA } from './kana.js';
 import { newCard, schedule, previewIntervals, DAY_MS } from './fsrs.js';
 import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
-import { pickNext, counts as queueCounts } from './queue.js';
+import { pickNext, counts as queueCounts, cramAdvance } from './queue.js';
 import { dayOf } from './day.js';
 import { normalizeConfig, parseSteps, formatSteps } from './config.js';
 import './pwa.js';
@@ -90,6 +90,11 @@ function applyPref() {
 }
 
 let active = [], current = null, flipped = false, reviewed = 0;
+let mode = 'normal', extraNew = 0, cramQueue = [], crammed = 0;
+const STUDY_MORE_N = 10;
+
+// Effective config for the session: Custom Study can raise today's new limit.
+const sessionConfig = () => ({ ...CONFIG, newPerDay: CONFIG.newPerDay + extraNew });
 
 // Fisher-Yates; randomizes new-card order so the deck isn't strictly gojūon.
 function shuffle(arr) {
@@ -113,7 +118,12 @@ function sessionCards() {
 
 function next() {
   flipped = false;
-  const pick = pickNext({ cards: sessionCards(), stats, config: CONFIG, now: now() });
+  if (mode === 'cram') {
+    if (!cramQueue.length) { current = null; return showCramDone(); }
+    current = cramQueue[0];
+    return render();
+  }
+  const pick = pickNext({ cards: sessionCards(), stats, config: sessionConfig(), now: now() });
   if (pick.kind === 'card') { current = pick.id; return render(); }
   current = null;
   showDone(pick);
@@ -147,13 +157,22 @@ function flip() {
   flipped = true;
   cardEl.classList.add('flipped');
   hintEl.hidden = true;
-  const p = previewIntervals(stateFor(current), now());
-  for (const g of ['again', 'hard', 'good', 'easy']) iv[g].textContent = fmtIv(p[g]);
+  if (mode === 'cram') {
+    for (const g of ['again', 'hard', 'good', 'easy']) iv[g].textContent = '';
+  } else {
+    const p = previewIntervals(stateFor(current), now(), CONFIG);
+    for (const g of ['again', 'hard', 'good', 'easy']) iv[g].textContent = fmtIv(p[g]);
+  }
   gradesEl.hidden = false;
 }
 
 function grade(g) {
   if (!flipped || !current) return;
+  if (mode === 'cram') {
+    cramQueue = cramAdvance(cramQueue, g);
+    crammed++;
+    return next();
+  }
   const before = stateFor(current);
   const t = now();
   store[current] = schedule(before, g, t, CONFIG);
@@ -168,7 +187,11 @@ function grade(g) {
 }
 
 function updateStats() {
-  const c = queueCounts({ cards: sessionCards(), stats, config: CONFIG, now: now() });
+  if (mode === 'cram') {
+    statsEl.innerHTML = `<span class="ct-learn">cram · ${cramQueue.length} left</span>`;
+    return;
+  }
+  const c = queueCounts({ cards: sessionCards(), stats, config: sessionConfig(), now: now() });
   statsEl.innerHTML = `<span class="ct-new">${c.newLeft} new</span> · ` +
     `<span class="ct-learn">${c.learning} learning</span> · ` +
     `<span class="ct-due">${c.due} due</span>`;
@@ -228,15 +251,46 @@ function showDone(done = { learning: 0, dueDay: null }) {
   const body = reviewed > 0
     ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${when}`
     : `nothing due right now.${when}`;
+  let extra = '';
+  if (deckBreakdown().fresh > 0)
+    extra += `<button id="more-new" class="grade hard">study ${STUDY_MORE_N} more new</button>`;
+  extra += '<button id="cram" class="grade">cram (free practice)</button>';
   doneEl.innerHTML = `<div class="done-mark">${head}</div>` +
     `<p class="done-note">${body}</p>` + statsPanel() +
-    '<button id="restart" class="grade good">study again</button>';
+    '<button id="restart" class="grade good">study again</button>' + extra;
   $('restart').addEventListener('click', startSession);
+  if ($('more-new')) $('more-new').addEventListener('click', studyMoreNew);
+  $('cram').addEventListener('click', startCram);
 }
 
 function startSession() {
+  mode = 'normal'; extraNew = 0;
   stage.hidden = false; doneEl.hidden = true;
   buildSession();
+}
+
+// Custom Study: raise today's new limit and keep going (reschedules normally).
+function studyMoreNew() {
+  extraNew += STUDY_MORE_N;
+  stage.hidden = false; doneEl.hidden = true;
+  next();
+}
+
+// Cram: drill the whole deck, shuffled, with no effect on the schedule.
+function startCram() {
+  mode = 'cram'; cramQueue = shuffle(deckCards()); crammed = 0;
+  stage.hidden = false; doneEl.hidden = true;
+  next();
+}
+
+function showCramDone() {
+  stage.hidden = true; doneEl.hidden = false;
+  doneEl.innerHTML = '<div class="done-mark">済</div>' +
+    `<p class="done-note">cram complete — ${crammed} drilled.</p>` +
+    '<button id="cram-again" class="grade good">cram again</button>' +
+    '<button id="cram-back" class="grade">back</button>';
+  $('cram-again').addEventListener('click', startCram);
+  $('cram-back').addEventListener('click', startSession);
 }
 
 // Write CONFIG into the panel inputs (retention shown as a percent).
