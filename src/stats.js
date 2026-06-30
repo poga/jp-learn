@@ -2,14 +2,16 @@
 // Days are epoch day-numbers (floor of ms/86400000), set by the page glue.
 
 function newStats() {
-  return { reviews: 0, again: 0, days: {} };
+  return { reviews: 0, again: 0, days: {}, log: [] };
 }
 
-// Fold one graded review into the log for `today`. Mutates and returns stats.
-function recordReview(stats, grade, today) {
+// Fold one graded review into the log for `today`. `wasReview` marks a card that
+// came from the review queue, so it counts against the daily review limit.
+function recordReview(stats, grade, today, wasReview = false) {
   stats.reviews += 1;
   const day = stats.days[today] || { n: 0, again: 0 };
   day.n += 1;
+  if (wasReview) day.rev = (day.rev || 0) + 1;
   if (grade === 'again') { stats.again += 1; day.again += 1; }
   stats.days[today] = day;
   return stats;
@@ -29,9 +31,21 @@ function recordNew(stats, today) {
   return stats;
 }
 
+// Append one review-log entry, keeping only the most recent `cap`.
+function recordLog(stats, entry, cap = 5000) {
+  stats.log.push(entry);
+  if (stats.log.length > cap) stats.log.splice(0, stats.log.length - cap);
+  return stats;
+}
+
 // New cards introduced on a given day.
 function newOn(stats, day) {
   return stats.days[day] && stats.days[day].new ? stats.days[day].new : 0;
+}
+
+// Review-queue cards answered on a given day; drives the daily review limit.
+function revDoneOn(stats, day) {
+  return stats.days[day] && stats.days[day].rev ? stats.days[day].rev : 0;
 }
 
 // Consecutive studied days ending today, or yesterday when today is untouched
@@ -63,5 +77,5 @@ function retention(stats) {
   return stats.reviews ? (stats.reviews - stats.again) / stats.reviews : null;
 }
 
-export { newStats, recordReview, recordNew, newOn, reviewsOn,
-  currentStreak, bestStreak, retention };
+export { newStats, recordReview, recordNew, newOn, revDoneOn, reviewsOn,
+  recordLog, currentStreak, bestStreak, retention };

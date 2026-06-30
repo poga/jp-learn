@@ -6,7 +6,7 @@ import path from 'node:path';
 import esbuild from 'esbuild';
 import { matchRomaji, KANA, LAYOUT } from './src/kana.js';
 import { newStats, recordReview, recordNew, newOn, reviewsOn, currentStreak,
-  bestStreak, retention } from './src/stats.js';
+  bestStreak, retention, revDoneOn, recordLog } from './src/stats.js';
 import * as fsrs from './src/fsrs.js';
 import { dayOf, dayStart } from './src/day.js';
 import { build } from './build.js';
@@ -113,6 +113,27 @@ test('retention is the share of non-again reviews, null when empty', () => {
   recordReview(s, 'good', 1);
   recordReview(s, 'again', 1);
   assert.ok(Math.abs(retention(s) - 2 / 3) < 1e-9);
+});
+
+test('stats: only review-state grades count toward the review limit', () => {
+  const s = newStats();
+  recordReview(s, 'good', 7, true);   // a review card
+  recordReview(s, 'good', 7, false);  // a new/learning card
+  recordReview(s, 'again', 7, true);  // a review card that lapsed
+  assert.equal(revDoneOn(s, 7), 2);
+  assert.equal(reviewsOn(s, 7), 3);   // total studied that day is still 3
+  assert.equal(revDoneOn(s, 99), 0);
+});
+
+test('stats: the review log appends and keeps only the most recent cap', () => {
+  const s = newStats();
+  recordLog(s, { id: 'a:hira', t: 1, grade: 'good', state: 'new' });
+  recordLog(s, { id: 'a:hira', t: 2, grade: 'again', state: 'review' });
+  assert.equal(s.log.length, 2);
+  assert.equal(s.log[1].grade, 'again');
+  for (let i = 0; i < 10; i++) recordLog(s, { id: 'x', t: i, grade: 'good', state: 'new' }, 5);
+  assert.equal(s.log.length, 5);
+  assert.equal(s.log[0].t, 5);        // oldest trimmed, newest kept
 });
 
 test('fsrs: retrievability is 0.9 at t = S and decays', () => {
