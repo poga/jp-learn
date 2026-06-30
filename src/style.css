@@ -26,6 +26,9 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", sans-serif;
+  /* kill double-tap zoom and iOS text auto-zoom; pinch is blocked via viewport meta */
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
 }
 header { max-width: 640px; margin: 0 auto 2rem; text-align: center; }
 h1 { font-size: 2rem; margin: 0 0 1rem; letter-spacing: .12em; }

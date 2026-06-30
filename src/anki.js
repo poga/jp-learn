@@ -372,6 +372,8 @@ resetBtn.addEventListener('click', () => {
 
 $('opt-save').addEventListener('click', saveConfig);
 $('opt-reset').addEventListener('click', resetConfig);
+// auto-save each option on blur/Enter so edits persist without clicking save
+Object.values(opt).forEach(i => i.addEventListener('change', saveConfig));
 
 fillOptions();
 applyPref();
