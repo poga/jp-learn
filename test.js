@@ -356,3 +356,86 @@ test('day: a review due-dated to tomorrow surfaces only next study-day', () => {
   assert.ok(due > T);
   assert.equal(dayOf(due, 4), dayOf(T, 4) + 1);
 });
+
+import { pickNext, counts } from './src/queue.js';
+
+const QDAY = 20000;
+const QNOW = dayStart(QDAY, 4) + 12 * 3600000; // midday on study-day 20000
+const cfg = { newPerDay: 2, reviewsPerDay: 2, learnSteps: [1, 10],
+  relearnSteps: [10], desiredRetention: 0.9, rolloverHour: 4, learnAheadMins: 20 };
+const newC = id => ({ id, state: 'new', due: 0, stability: 0, difficulty: 0, step: 0 });
+const learnC = (id, due) => ({ id, state: 'learning', due, step: 0 });
+const revC = (id, due) => ({ id, state: 'review', due, stability: 10, difficulty: 5 });
+
+test('queue: a ready learning card preempts new and due reviews', () => {
+  const cards = [newC('n1'), revC('r1', QNOW - 1000), learnC('l1', QNOW - 1000)];
+  assert.deepEqual(pickNext({ cards, stats: newStats(), config: cfg, now: QNOW }),
+    { kind: 'card', id: 'l1' });
+});
+
+test('queue: new and review interleave instead of all-new-then-reviews', () => {
+  const cards = [newC('n1'), newC('n2'), revC('r1', QNOW - 2000), revC('r2', QNOW - 1000)];
+  const stats = newStats();
+  const order = [];
+  for (let i = 0; i < 4; i++) {
+    const p = pickNext({ cards, stats, config: cfg, now: QNOW });
+    order.push(p.id);
+    // simulate answering: drop the card, record its kind
+    const c = cards.find(x => x.id === p.id);
+    cards.splice(cards.indexOf(c), 1);
+    if (c.state === 'new') recordNew(stats, QDAY);
+    recordReview(stats, 'good', QDAY, c.state === 'review');
+  }
+  assert.ok(order.includes('n1') && order.includes('r1'));
+  assert.notDeepEqual(order.slice(0, 2), ['n1', 'n2']); // not both new first
+});
+
+test('queue: new stops at newPerDay, reviews stop at reviewsPerDay', () => {
+  const stats = newStats();
+  recordNew(stats, QDAY); recordNew(stats, QDAY);           // 2 new done == cap
+  recordReview(stats, 'good', QDAY, true);
+  recordReview(stats, 'good', QDAY, true);                  // 2 reviews done == cap
+  const cards = [newC('n1'), revC('r1', QNOW - 1000)];
+  const p = pickNext({ cards, stats, config: cfg, now: QNOW });
+  assert.equal(p.kind, 'done');                             // both limits spent
+});
+
+test('queue: learning cards ignore the daily limits', () => {
+  const stats = newStats();
+  recordNew(stats, QDAY); recordNew(stats, QDAY);
+  recordReview(stats, 'good', QDAY, true); recordReview(stats, 'good', QDAY, true);
+  const cards = [learnC('l1', QNOW - 1000)];                // limits spent, learning still shows
+  assert.deepEqual(pickNext({ cards, stats, config: cfg, now: QNOW }),
+    { kind: 'card', id: 'l1' });
+});
+
+test('queue: learn-ahead shows a soon card now, else reports done', () => {
+  const inside = [learnC('l1', QNOW + 10 * 60000)];         // 10m away, inside 20m window
+  assert.deepEqual(pickNext({ cards: inside, stats: newStats(), config: cfg, now: QNOW }),
+    { kind: 'card', id: 'l1' });
+  const outside = [learnC('l2', QNOW + 40 * 60000)];        // 40m away, outside window
+  const p = pickNext({ cards: outside, stats: newStats(), config: cfg, now: QNOW });
+  assert.equal(p.kind, 'done');
+  assert.equal(p.learning, 1);
+});
+
+test('queue: done reports the next due day from blocked new and future reviews', () => {
+  const stats = newStats();
+  recordNew(stats, QDAY); recordNew(stats, QDAY);           // new cap spent -> new available tomorrow
+  const cards = [newC('n1'), revC('r1', dayStart(QDAY + 3, 4))];
+  const p = pickNext({ cards, stats, config: cfg, now: QNOW });
+  assert.equal(p.kind, 'done');
+  assert.equal(p.dueDay, QDAY + 1);                         // soonest is the blocked new card
+});
+
+test('queue: counts are limit-capped and agree with the queue', () => {
+  const stats = newStats();
+  recordNew(stats, QDAY);                                   // 1 of 2 new used
+  const cards = [newC('n1'), newC('n2'), newC('n3'),
+    learnC('l1', QNOW + 5 * 60000), revC('r1', QNOW - 1000), revC('r2', QNOW - 1000),
+    revC('r3', QNOW - 1000)];
+  const c = counts({ cards, stats, config: cfg, now: QNOW });
+  assert.equal(c.newLeft, 1);                               // cap 2 minus 1 used
+  assert.equal(c.learning, 1);
+  assert.equal(c.due, 2);                                   // 3 due reviews capped at 2
+});
