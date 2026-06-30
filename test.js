@@ -8,6 +8,7 @@ import { matchRomaji, KANA, LAYOUT } from './src/kana.js';
 import { newStats, recordReview, recordNew, newOn, reviewsOn, currentStreak,
   bestStreak, retention } from './src/stats.js';
 import * as fsrs from './src/fsrs.js';
+import { dayOf, dayStart } from './src/day.js';
 import { build } from './build.js';
 
 test('prefix match returns true for multiple on a single letter', () => {
@@ -301,4 +302,27 @@ test('build: both pages link manifest, apple-touch-icon, and a module script', (
     assert.match(html, /rel="apple-touch-icon"/);
     assert.match(html, /<script type="module"/);
   }
+});
+
+test('day: rollover splits a calendar day at the rollover hour', () => {
+  const base = dayStart(20000, 4);          // 04:00 local on study-day 20000
+  // 3h after rollover is the same study-day; 25h after crosses into the next.
+  assert.equal(dayOf(base + 3 * 3600000, 4), 20000);
+  assert.equal(dayOf(base + 25 * 3600000, 4), 20001);
+  // 1h before rollover still belongs to the previous study-day.
+  assert.equal(dayOf(base - 3600000, 4), 19999);
+});
+
+test('day: dayStart is the inverse of dayOf and lands one day apart', () => {
+  for (const d of [18000, 19999, 20000, 20377]) {
+    assert.equal(dayOf(dayStart(d, 4), 4), d);
+    assert.ok(dayStart(d + 1, 4) - dayStart(d, 4) >= 23 * 3600000); // ~1 day (DST-tolerant)
+  }
+});
+
+test('day: a review due-dated to tomorrow surfaces only next study-day', () => {
+  const T = dayStart(20000, 4) + 20 * 3600000; // late in study-day 20000
+  const due = dayStart(dayOf(T, 4) + 1, 4);     // due "in 1 day"
+  assert.ok(due > T);
+  assert.equal(dayOf(due, 4), dayOf(T, 4) + 1);
 });
