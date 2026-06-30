@@ -1,6 +1,6 @@
 import { KANA } from './kana.js';
 import { newCard, schedule, previewIntervals, DAY_MS } from './fsrs.js';
-import { newStats, recordReview, recordNew, reviewsOn, revDoneOn, recordLog,
+import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
 import { pickNext, counts as queueCounts } from './queue.js';
 import { dayOf } from './day.js';
@@ -148,11 +148,12 @@ function flip() {
 function grade(g) {
   if (!flipped || !current) return;
   const before = stateFor(current);
-  store[current] = schedule(before, g, now(), CONFIG);
-  const day = today();
+  const t = now();
+  store[current] = schedule(before, g, t, CONFIG);
+  const day = dayOf(t, CONFIG.rolloverHour);
   if (before.state === 'new') recordNew(stats, day);
   recordReview(stats, g, day, before.state === 'review');
-  recordLog(stats, { id: current, t: now(), grade: g, state: before.state });
+  recordLog(stats, { id: current, t, grade: g, state: before.state });
   saveStore(); saveStats();
   reviewed++;
   updateStreak();

@@ -5,8 +5,7 @@ function newStats() {
   return { reviews: 0, again: 0, days: {}, log: [] };
 }
 
-// Fold one graded review into the log for `today`. `wasReview` marks a card that
-// came from the review queue, so it counts against the daily review limit.
+// Fold one graded review into `today`; `wasReview` counts it against the review limit.
 function recordReview(stats, grade, today, wasReview = false) {
   stats.reviews += 1;
   const day = stats.days[today] || { n: 0, again: 0 };
@@ -22,8 +21,7 @@ function reviewsOn(stats, day) {
   return stats.days[day] ? stats.days[day].n : 0;
 }
 
-// Count a freshly-introduced new card for `today`. Drives the per-day new cap,
-// which resets at midnight because each day gets its own bucket.
+// Count a freshly-introduced new card for `today`; drives the per-day new cap.
 function recordNew(stats, today) {
   const day = stats.days[today] || { n: 0, again: 0 };
   day.new = (day.new || 0) + 1;

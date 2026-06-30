@@ -2,9 +2,8 @@ import { dayOf } from './day.js';
 import { newOn, revDoneOn } from './stats.js';
 import { DEFAULT_CONFIG } from './config.js';
 
-// Pure session queue over a deck of card states. No DOM, no storage: callers pass
-// the card array, the stats log, the config, and the current time. Mirrors Anki's
-// new/learning/review interleave with two daily limits and a learn-ahead window.
+// Pure session queue over the deck's card states. No DOM, no storage — callers pass
+// cards, stats, config, now. Anki new/learning/review interleave + limits + learn-ahead.
 
 const isLearn = s => s === 'learning' || s === 'relearning';
 

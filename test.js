@@ -136,6 +136,12 @@ test('stats: the review log appends and keeps only the most recent cap', () => {
   assert.equal(s.log[0].t, 5);        // oldest trimmed, newest kept
 });
 
+test('stats: recordLog works on a migrated stats object missing the log field', () => {
+  const migrated = Object.assign(newStats(), JSON.parse('{"reviews":3,"again":1,"days":{}}'));
+  recordLog(migrated, { id: 'a:hira', t: 1, grade: 'good', state: 'new' });
+  assert.equal(migrated.log.length, 1);
+});
+
 test('fsrs: retrievability is 0.9 at t = S and decays', () => {
   for (const S of [1, 10, 100]) {
     assert.ok(Math.abs(fsrs.retrievability(S, S) - 0.9) < 1e-6);
