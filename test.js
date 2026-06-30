@@ -306,8 +306,11 @@ test('build: both pages link manifest, apple-touch-icon, and a module script', (
 
 test('day: rollover splits a calendar day at the rollover hour', () => {
   const base = dayStart(20000, 4);          // 04:00 local on study-day 20000
-  // 3h after rollover is the same study-day; 25h after crosses into the next.
+  // 3h after rollover is the same study-day.
   assert.equal(dayOf(base + 3 * 3600000, 4), 20000);
+  // 21h after = 01:00 next calendar day, still before the 4am rollover.
+  assert.equal(dayOf(base + 21 * 3600000, 4), 20000);
+  // 25h after = 05:00 next calendar day, past the rollover → next study-day.
   assert.equal(dayOf(base + 25 * 3600000, 4), 20001);
   // 1h before rollover still belongs to the previous study-day.
   assert.equal(dayOf(base - 3600000, 4), 19999);

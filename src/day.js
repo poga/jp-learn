@@ -1,6 +1,5 @@
 // Study-day math with a configurable rollover hour. Pure. Browser global + node.
-// Day N begins at `rolloverHour` local (Anki's default 4am), so a late-night
-// session counts toward the day it started.
+// Day N begins at `rolloverHour` local (Anki default 4am), so late nights count to the day they started.
 
 const DAY_MS = 86400000, HOUR_MS = 3600000;
 
