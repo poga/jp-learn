@@ -4,7 +4,7 @@ import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
 import { pickNext, counts as queueCounts } from './queue.js';
 import { dayOf } from './day.js';
-import { DEFAULT_CONFIG } from './config.js';
+import { DEFAULT_CONFIG, normalizeConfig, parseSteps, formatSteps } from './config.js';
 import './pwa.js';
 
 // Page glue: localStorage, flip/grade UI, drives the pure queue. Browser-only.
@@ -12,7 +12,12 @@ import './pwa.js';
 const STORE_KEY = 'anki-fsrs-v1';
 const STATS_KEY = 'anki-stats-v2';
 const PREF_KEY = 'anki-deck-v1';
-const CONFIG = DEFAULT_CONFIG;
+const CONFIG_KEY = 'anki-config-v1';
+function loadConfig() {
+  try { return normalizeConfig(JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); }
+  catch (e) { return normalizeConfig({}); }
+}
+let CONFIG = loadConfig();
 const MATURE_DAYS = 21;
 
 // drop legacy SM-2 progress and stats (full reset on upgrade)
@@ -58,6 +63,8 @@ const gradesEl = $('grades'), scriptEl = $('card-script');
 const frontEl = $('card-front'), readingEl = $('card-reading');
 const iv = { again: $('iv-again'), hard: $('iv-hard'),
   good: $('iv-good'), easy: $('iv-easy') };
+const opt = { new: $('opt-new'), rev: $('opt-rev'), learn: $('opt-learn'),
+  relearn: $('opt-relearn'), retention: $('opt-retention'), rollover: $('opt-rollover') };
 
 function selectedScripts() {
   return [...deckBar.querySelectorAll('input[name="script"]:checked')]
@@ -232,6 +239,39 @@ function startSession() {
   buildSession();
 }
 
+// Write CONFIG into the panel inputs (retention shown as a percent).
+function fillOptions() {
+  opt.new.value = CONFIG.newPerDay;
+  opt.rev.value = CONFIG.reviewsPerDay;
+  opt.learn.value = formatSteps(CONFIG.learnSteps);
+  opt.relearn.value = formatSteps(CONFIG.relearnSteps);
+  opt.retention.value = Math.round(CONFIG.desiredRetention * 100);
+  opt.rollover.value = CONFIG.rolloverHour;
+}
+
+// Persist CONFIG and apply it to the live session.
+function applyConfig() {
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(CONFIG)); } catch (e) {}
+  fillOptions();        // reflect clamped values back to the inputs
+  updateStreak();       // rollover may have shifted the day
+  startSession();
+}
+
+// Read the panel, normalize, and apply.
+function saveConfig() {
+  CONFIG = normalizeConfig({
+    newPerDay: Number(opt.new.value),
+    reviewsPerDay: Number(opt.rev.value),
+    learnSteps: parseSteps(opt.learn.value),
+    relearnSteps: parseSteps(opt.relearn.value),
+    desiredRetention: Number(opt.retention.value) / 100,
+    rolloverHour: Number(opt.rollover.value),
+  });
+  applyConfig();
+}
+
+function resetConfig() { CONFIG = normalizeConfig({}); applyConfig(); }
+
 cardEl.addEventListener('click', flip);
 gradesEl.querySelectorAll('button').forEach(b =>
   b.addEventListener('click', () => grade(b.dataset.grade)));
@@ -276,6 +316,10 @@ resetBtn.addEventListener('click', () => {
   }, 3000);
 });
 
+$('opt-save').addEventListener('click', saveConfig);
+$('opt-reset').addEventListener('click', resetConfig);
+
+fillOptions();
 applyPref();
 updateStreak();
 startSession();

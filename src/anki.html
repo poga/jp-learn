@@ -26,6 +26,22 @@
       <label><input type="checkbox" name="script" value="kata" checked> 片仮名</label>
     </div>
 
+    <details class="options" id="options">
+      <summary>⚙ options</summary>
+      <div class="options-grid">
+        <label>new cards/day <input type="number" id="opt-new" min="0" max="9999"></label>
+        <label>max reviews/day <input type="number" id="opt-rev" min="0" max="9999"></label>
+        <label>learning steps (min) <input type="text" id="opt-learn"></label>
+        <label>relearning steps (min) <input type="text" id="opt-relearn"></label>
+        <label>target retention % <input type="number" id="opt-retention" min="80" max="97"></label>
+        <label>day rollover hour <input type="number" id="opt-rollover" min="0" max="23"></label>
+      </div>
+      <div class="options-actions">
+        <button id="opt-save" class="opt-btn">save</button>
+        <button id="opt-reset" class="opt-btn">reset to defaults</button>
+      </div>
+    </details>
+
     <p class="streak" id="streak"></p>
     <p class="stats" id="stats"></p>
 

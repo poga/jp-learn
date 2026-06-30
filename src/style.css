@@ -245,3 +245,22 @@ main.anki { max-width: 480px; }
   border-color: var(--again);
   opacity: 1;
 }
+
+.options { max-width: 22rem; margin: 0 auto 1.25rem; font-size: .9rem; }
+.options summary { cursor: pointer; text-align: center; opacity: .55; list-style: none; }
+.options summary::-webkit-details-marker { display: none; }
+.options summary:hover { opacity: .9; }
+.options-grid { display: grid; gap: .5rem; margin: .75rem 0; }
+.options-grid label { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+.options-grid input {
+  width: 6rem; font: inherit; padding: .25rem .4rem;
+  border: 1px solid var(--line); border-radius: .4rem;
+  background: var(--cell); color: var(--text);
+}
+.options-actions { display: flex; justify-content: center; gap: .75rem; }
+.opt-btn {
+  font: inherit; font-size: .8rem; color: var(--text); background: none;
+  border: 1px solid var(--line); border-radius: .5rem; padding: .4rem .9rem;
+  cursor: pointer; opacity: .7;
+}
+.opt-btn:hover { opacity: 1; }
