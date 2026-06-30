@@ -425,6 +425,19 @@ test('queue: learn-ahead shows a soon card now, else reports done', () => {
   assert.equal(p.learning, 1);
 });
 
+test('queue: learn-ahead advances past the just-answered card when another waits', () => {
+  const cards = [learnC('l1', QNOW + 1 * 60000), learnC('l2', QNOW + 8 * 60000)];
+  assert.deepEqual(pickNext({ cards, stats: newStats(), config: cfg, now: QNOW }),
+    { kind: 'card', id: 'l1' });                             // soonest by default
+  assert.deepEqual(                                          // just answered l1 -> serve l2
+    pickNext({ cards, stats: newStats(), config: cfg, now: QNOW, lastId: 'l1' }),
+    { kind: 'card', id: 'l2' });
+  const solo = [learnC('l1', QNOW + 1 * 60000), learnC('l2', QNOW + 40 * 60000)];
+  assert.deepEqual(                                          // l1 alone in-window -> re-served
+    pickNext({ cards: solo, stats: newStats(), config: cfg, now: QNOW, lastId: 'l1' }),
+    { kind: 'card', id: 'l1' });
+});
+
 test('queue: done reports the next due day from blocked new and future reviews', () => {
   const stats = newStats();
   recordNew(stats, QDAY); recordNew(stats, QDAY);           // new cap spent -> new available tomorrow

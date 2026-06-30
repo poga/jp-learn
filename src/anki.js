@@ -116,14 +116,14 @@ function sessionCards() {
   return active.map(id => ({ id, ...stateFor(id) }));
 }
 
-function next() {
+function next(lastId = null) {
   flipped = false;
   if (mode === 'cram') {
     if (!cramQueue.length) { current = null; return showCramDone(); }
     current = cramQueue[0];
     return render();
   }
-  const pick = pickNext({ cards: sessionCards(), stats, config: sessionConfig(), now: now() });
+  const pick = pickNext({ cards: sessionCards(), stats, config: sessionConfig(), now: now(), lastId });
   if (pick.kind === 'card') { current = pick.id; return render(); }
   current = null;
   showDone(pick);
@@ -183,7 +183,7 @@ function grade(g) {
   saveStore(); saveStats();
   reviewed++;
   updateStreak();
-  next();
+  next(current);
 }
 
 function updateStats() {

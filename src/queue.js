@@ -45,7 +45,7 @@ function nextDueDay(cards, cfg, today, newDone) {
   return min;
 }
 
-function pickNext({ cards, stats, config = DEFAULT_CONFIG, now }) {
+function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId }) {
   const today = dayOf(now, config.rolloverHour);
   const newDone = newOn(stats, today), revDone = revDoneOn(stats, today);
   const { readyLearn, pendingLearn, fresh, dueRev } = partition(cards, config, now, today);
@@ -62,11 +62,11 @@ function pickNext({ cards, stats, config = DEFAULT_CONFIG, now }) {
   if (newOpen) return { kind: 'card', id: fresh[0].id };
   if (revOpen) return { kind: 'card', id: dueRev[0].id };
 
-  // only not-yet-ripe learning cards remain: learn-ahead or report done.
+  // learn-ahead, skipping the just-answered card so Again/Hard advance not loop.
   if (pendingLearn.length) {
-    const soon = pendingLearn[0];
-    if (soon.due - now <= config.learnAheadMins * 60000)
-      return { kind: 'card', id: soon.id };
+    const inWindow = pendingLearn.filter(c => c.due - now <= config.learnAheadMins * 60000);
+    const soon = inWindow.find(c => c.id !== lastId) || inWindow[0];
+    if (soon) return { kind: 'card', id: soon.id };
   }
   return { kind: 'done', learning: pendingLearn.length,
     dueDay: nextDueDay(cards, config, today, newDone) };
