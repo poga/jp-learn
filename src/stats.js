@@ -51,7 +51,7 @@ function unrecordReview(stats, grade, day, wasReview = false) {
 // Reverse one recorded new-card introduction.
 function unrecordNew(stats, day) {
   const d = stats.days[day];
-  if (d && d.new) d.new -= 1;
+  if (d) d.new = Math.max(0, (d.new || 0) - 1);
   return stats;
 }
 

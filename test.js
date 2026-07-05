@@ -169,6 +169,10 @@ test('stats: unrecord floors at zero on empty stats', () => {
   assert.equal(s.reviews, 0);
   assert.equal(s.again, 0);
   assert.equal(reviewsOn(s, 5), 0);
+  recordReview(s, 'good', 6, false);   // creates the day-6 bucket, no new
+  unrecordNew(s, 6);
+  unrecordNew(s, 6);
+  assert.equal(newOn(s, 6), 0);        // clamped, never negative
 });
 
 test('fsrs: retrievability is 0.9 at t = S and decays', () => {
