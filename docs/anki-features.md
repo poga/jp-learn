@@ -9,9 +9,10 @@ already have.
 - 平仮名/片仮名 deck toggle, persisted across reloads
 - New-card cap per session, localStorage persistence
 - **Stats panel + daily streak + retention + new/learning/mature breakdown**
+- **Undo last answer** (z / Ctrl+Z), **leech auto-suspend** at 8 lapses with
+  unsuspend-all, Anki Hard-step behavior, honest daily-limit done screen
 
 ## Reviewing & answering
-- **Undo last answer** — restore the previous card+state. value: high, effort: low
 - **Typed-answer mode** — type the rōmaji instead of self-grading; reuse
   `matchRomaji` from kana.js. value: high, effort: med (great fit)
 - **Reverse cards** — reading → glyph (production recall), not just recognition.
@@ -27,8 +28,6 @@ already have.
   value: med, effort: low
 - **FSRS** — swap SM-2 for the modern Anki default scheduler. value: med,
   effort: high
-- **Leech detection** — auto-flag/suspend cards failed N times. value: med,
-  effort: low
 - **Suspend / bury** — pull a card out of rotation temporarily. value: med,
   effort: low
 - **Custom study / cram** — review ahead or drill a chosen group, off-schedule.
@@ -66,7 +65,7 @@ already have.
 
 ## Suggested next picks
 1. Typed-answer mode (reuses `matchRomaji`, turns recognition into recall)
-2. Undo last answer (cheap, expected by every Anki user)
-3. Group filters (data is already there)
-4. Calendar heatmap (the natural follow-up to streaks; `stats.days` is ready)
-5. Export / import (protects the progress streaks now make valuable)
+2. Group filters (data is already there)
+3. Calendar heatmap (the natural follow-up to streaks; `stats.days` is ready)
+4. Export / import (protects the progress streaks now make valuable)
+5. Reverse cards (production recall, not just recognition)
