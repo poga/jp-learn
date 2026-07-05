@@ -1,5 +1,5 @@
 import { KANA } from './kana.js';
-import { newCard, schedule, previewIntervals, DAY_MS } from './fsrs.js';
+import { newCard, schedule, previewIntervals, isLeech, DAY_MS } from './fsrs.js';
 import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   currentStreak, bestStreak, retention } from './stats.js';
 import { pickNext, counts as queueCounts, cramAdvance } from './queue.js';
@@ -175,7 +175,10 @@ function grade(g) {
   }
   const before = stateFor(current);
   const t = now();
-  store[current] = schedule(before, g, t, CONFIG);
+  const after = schedule(before, g, t, CONFIG);
+  if (before.state === 'review' && g === 'again'
+      && isLeech(after.lapses, CONFIG.leechThreshold)) after.suspended = true;
+  store[current] = after;
   const day = dayOf(t, CONFIG.rolloverHour);
   if (before.state === 'new') recordNew(stats, day);
   recordReview(stats, g, day, before.state === 'review');
@@ -207,15 +210,16 @@ function updateStreak() {
 
 // Split the selected deck into new / learning / mature, à la Anki's counts.
 function deckBreakdown() {
-  let fresh = 0, learning = 0, mature = 0;
+  let fresh = 0, learning = 0, mature = 0, suspended = 0;
   const ids = deckCards();
   for (const id of ids) {
     const st = stateFor(id);
-    if (st.state === 'new') fresh++;
+    if (st.suspended) suspended++;
+    else if (st.state === 'new') fresh++;
     else if (st.state === 'review' && st.stability >= MATURE_DAYS) mature++;
     else learning++;
   }
-  return { fresh, learning, mature, total: ids.length };
+  return { fresh, learning, mature, suspended, total: ids.length };
 }
 
 function statsPanel() {
@@ -233,7 +237,11 @@ function statsPanel() {
     </div>
     <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
     <p class="progress-label">${learned} / ${bd.total} learned ·
-      ${bd.fresh} new · ${bd.learning} learning · ${bd.mature} mature</p>`;
+      ${bd.fresh} new · ${bd.learning} learning · ${bd.mature} mature</p>`
+    + (bd.suspended > 0
+      ? `<p class="progress-label">⚠ ${bd.suspended} leech${bd.suspended > 1 ? 'es' : ''} suspended
+        <button id="unsuspend" class="opt-btn">unsuspend all</button></p>`
+      : '');
 }
 
 function showDone(done = { learning: 0, dueDay: null, revHidden: 0 }) {
@@ -263,6 +271,7 @@ function showDone(done = { learning: 0, dueDay: null, revHidden: 0 }) {
   $('restart').addEventListener('click', startSession);
   if ($('more-new')) $('more-new').addEventListener('click', studyMoreNew);
   $('cram').addEventListener('click', startCram);
+  if ($('unsuspend')) $('unsuspend').addEventListener('click', unsuspendAll);
 }
 
 function startSession() {
@@ -280,9 +289,17 @@ function studyMoreNew() {
 
 // Cram: drill the whole deck, shuffled, with no effect on the schedule.
 function startCram() {
-  mode = 'cram'; cramQueue = shuffle(deckCards()); crammed = 0;
+  mode = 'cram'; cramQueue = shuffle(deckCards().filter(id => !stateFor(id).suspended));
+  crammed = 0;
   stage.hidden = false; doneEl.hidden = true;
   next();
+}
+
+// Clear every leech suspension and fold the cards back into the schedule.
+function unsuspendAll() {
+  for (const id of Object.keys(store)) delete store[id].suspended;
+  saveStore();
+  startSession();
 }
 
 function showCramDone() {
