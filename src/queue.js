@@ -29,10 +29,11 @@ function partition(cards, cfg, now, today) {
   return { readyLearn, pendingLearn, fresh, dueRev };
 }
 
-// Earliest study-day with available work, or null. Learning is handled separately
-// via the done `learning` count, so it is excluded here.
-function nextDueDay(cards, cfg, today, newDone) {
+// Earliest study-day with available work given spent limits, or null. Learning
+// is handled separately via the done `learning` count, so it is excluded here.
+function nextDueDay(cards, cfg, today, newDone, revDone) {
   const canNew = newDone < cfg.newPerDay;
+  const canRev = revDone < cfg.reviewsPerDay;
   let min = null;
   for (const c of cards) {
     if (c.suspended) continue;
@@ -40,7 +41,7 @@ function nextDueDay(cards, cfg, today, newDone) {
     if (c.state === 'new') d = canNew ? today : today + 1;
     else if (c.state === 'review') {
       const dd = dayOf(c.due, cfg.rolloverHour);
-      d = dd > today ? dd : today;
+      d = dd > today ? dd : canRev ? today : today + 1;
     }
     if (d != null && (min == null || d < min)) min = d;
   }
@@ -71,7 +72,8 @@ function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId }) {
     if (soon) return { kind: 'card', id: soon.id };
   }
   return { kind: 'done', learning: pendingLearn.length,
-    dueDay: nextDueDay(cards, config, today, newDone) };
+    revHidden: revDone >= config.reviewsPerDay ? dueRev.length : 0,
+    dueDay: nextDueDay(cards, config, today, newDone, revDone) };
 }
 
 function counts({ cards, stats, config = DEFAULT_CONFIG, now }) {

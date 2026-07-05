@@ -520,6 +520,17 @@ test('queue: raising newPerDay past the spent cap reopens new cards (study more)
     { kind: 'card', id: 'n1' });                     // bump reopens the new card
 });
 
+test('queue: a spent review limit reports hidden reviews due tomorrow', () => {
+  const stats = newStats();
+  recordReview(stats, 'good', QDAY, true);
+  recordReview(stats, 'good', QDAY, true);          // review cap (2) spent
+  const cards = [revC('r1', QNOW - 2000), revC('r2', QNOW - 1000)];
+  const p = pickNext({ cards, stats, config: cfg, now: QNOW });
+  assert.equal(p.kind, 'done');
+  assert.equal(p.revHidden, 2);
+  assert.equal(p.dueDay, QDAY + 1);                 // hint says tomorrow, not silence
+});
+
 import { DEFAULT_CONFIG, parseSteps, formatSteps, normalizeConfig } from './src/config.js';
 
 test('config: parseSteps reads space-separated positive minutes, else empty', () => {

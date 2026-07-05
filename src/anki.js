@@ -236,7 +236,7 @@ function statsPanel() {
       ${bd.fresh} new · ${bd.learning} learning · ${bd.mature} mature</p>`;
 }
 
-function showDone(done = { learning: 0, dueDay: null }) {
+function showDone(done = { learning: 0, dueDay: null, revHidden: 0 }) {
   stage.hidden = true; doneEl.hidden = false;
   if (deckCards().length === 0) {
     doneEl.innerHTML = '<p class="done-note">tick 平仮名 or 片仮名 above.</p>';
@@ -247,10 +247,12 @@ function showDone(done = { learning: 0, dueDay: null }) {
   const when = days > 0 ? ` Next due in ${days} day${days > 1 ? 's' : ''}.`
     : done.learning > 0
       ? ` ${done.learning} still in learning — come back soon.` : '';
+  const capped = done.revHidden > 0
+    ? ` daily review limit reached — ${done.revHidden} waiting.` : '';
   const head = reviewed > 0 ? '完了' : 'all caught up';
   const body = reviewed > 0
-    ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${when}`
-    : `nothing due right now.${when}`;
+    ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${capped}${when}`
+    : `nothing due right now.${capped}${when}`;
   let extra = '';
   if (deckBreakdown().fresh > 0)
     extra += `<button id="more-new" class="grade hard">study ${STUDY_MORE_N} more new</button>`;
