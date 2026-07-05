@@ -131,7 +131,7 @@ function transition(card, grade, now, cfg = DEFAULT_CONFIG) {
     const mins = from === 'relearning' ? cfg.relearnSteps : cfg.learnSteps;
     const steps = mins.map(m => m * MIN_MS);
     c.state = from === 'relearning' ? 'relearning' : 'learning';
-    const i = from === 'new' ? 0 : card.step;
+    const i = from === 'new' ? 0 : Math.min(card.step, steps.length - 1);
     if (g === 1) { c.step = 0; c.due = now + steps[0]; }
     else if (g === 2) {
       // Hard repeats the step; step 0 averages the first two, lone step x1.5.

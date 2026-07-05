@@ -394,8 +394,10 @@ deckBar.querySelectorAll('input').forEach(i =>
 undoBtn.addEventListener('click', undo);
 
 document.addEventListener('keydown', ev => {
-  if (ev.target.tagName === 'INPUT') return;
-  if (ev.key === 'z' || ev.key === 'Z') { ev.preventDefault(); return undo(); }
+  if (ev.target.closest('.options')) return;
+  if ((ev.key === 'z' || ev.key === 'Z') && !ev.shiftKey) {
+    ev.preventDefault(); return undo();
+  }
   if (!doneEl.hidden || !current) return;
   if (!flipped) {
     if (ev.code === 'Space' || ev.code === 'Enter') { ev.preventDefault(); flip(); }

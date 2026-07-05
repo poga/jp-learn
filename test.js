@@ -309,6 +309,18 @@ test('fsrs: Hard repeats the current learning step; lone step is x1.5', () => {
   assert.equal(first.due - T, 5.5 * MIN);           // first of two: average
 });
 
+test('fsrs: a step index past a shrunken step list clamps, never NaN', () => {
+  const stranded = { state: 'learning', stability: 1, difficulty: 5,
+    due: T, last_review: T - MIN, reps: 0, lapses: 0, step: 3 };
+  const cfg1 = { newPerDay: 20, reviewsPerDay: 200, learnSteps: [10],
+    relearnSteps: [10], desiredRetention: 0.9, rolloverHour: 4, learnAheadMins: 20 };
+  const h = fsrs.schedule(stranded, 'hard', T, cfg1);
+  assert.equal(h.due - T, 15 * MIN);          // clamped to the lone step, x1.5
+  const g = fsrs.schedule(stranded, 'good', T, cfg1);
+  assert.equal(g.state, 'review');            // past the last step -> graduates
+  assert.ok(Number.isFinite(g.due));
+});
+
 test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () => {
   const card = { state: 'review', stability: 1, difficulty: 5,
     due: T, last_review: T - fsrs.DAY_MS, reps: 2, lapses: 0, step: 0 };

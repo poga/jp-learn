@@ -29,8 +29,7 @@ function partition(cards, cfg, now, today) {
   return { readyLearn, pendingLearn, fresh, dueRev };
 }
 
-// Earliest study-day with available work given spent limits, or null. Learning
-// is handled separately via the done `learning` count, so it is excluded here.
+// Earliest study-day with work given spent limits, or null; learning excluded.
 function nextDueDay(cards, cfg, today, newDone, revDone) {
   const canNew = newDone < cfg.newPerDay;
   const canRev = revDone < cfg.reviewsPerDay;
