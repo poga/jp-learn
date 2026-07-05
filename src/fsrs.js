@@ -73,6 +73,12 @@ function sameDayStability(S, g) {
   return clamp(g >= 2 ? S * Math.max(inc, 1) : S * inc, S_MIN, S_MAX);
 }
 
+// Anki leech check: trips at the threshold, then every half-threshold after.
+function isLeech(lapses, threshold = 8) {
+  if (lapses < threshold) return false;
+  return (lapses - threshold) % Math.max(1, Math.floor(threshold / 2)) === 0;
+}
+
 const FUZZ_RANGES = [[2.5, 7, 0.15], [7, 20, 0.10], [20, Infinity, 0.05]];
 
 // Inclusive [min,max] day band Anki randomizes an interval within.
@@ -181,5 +187,5 @@ function previewIntervals(card, now, cfg = DEFAULT_CONFIG) {
 export { newCard, schedule, previewIntervals,
   retrievability, nextInterval, fuzzRange, applyFuzz,
   initStability, initDifficulty, nextDifficulty,
-  successStability, lapseStability, sameDayStability,
+  successStability, lapseStability, sameDayStability, isLeech,
   DAY_MS, MIN_MS };

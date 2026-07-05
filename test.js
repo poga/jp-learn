@@ -196,6 +196,17 @@ test('fsrs: a same-day success does not shrink stability', () => {
   assert.ok(fsrs.sameDayStability(2, 4) >= 2);
 });
 
+test('fsrs: isLeech trips at the threshold and every half-threshold after', () => {
+  assert.equal(fsrs.isLeech(7), false);
+  assert.equal(fsrs.isLeech(8), true);
+  assert.equal(fsrs.isLeech(9), false);
+  assert.equal(fsrs.isLeech(12), true);
+  assert.equal(fsrs.isLeech(16), true);
+  assert.equal(fsrs.isLeech(3, 4), false);
+  assert.equal(fsrs.isLeech(4, 4), true);
+  assert.equal(fsrs.isLeech(6, 4), true);
+});
+
 test('fsrs: no fuzz below 2.5 days; band widens with interval', () => {
   const small = fsrs.fuzzRange(2);
   assert.equal(small.min, 2);
@@ -528,4 +539,5 @@ test('config: normalizeConfig merges a partial blob over defaults', () => {
   assert.equal(c.reviewsPerDay, DEFAULT_CONFIG.reviewsPerDay);
   assert.equal(c.rolloverHour, DEFAULT_CONFIG.rolloverHour);
   assert.equal(c.learnAheadMins, DEFAULT_CONFIG.learnAheadMins);
+  assert.equal(normalizeConfig({ leechThreshold: 3 }).leechThreshold, 8);
 });

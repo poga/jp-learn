@@ -9,6 +9,7 @@ const DEFAULT_CONFIG = {
   desiredRetention: 0.9,
   rolloverHour: 4,
   learnAheadMins: 20,
+  leechThreshold: 8,
 };
 
 // Whitespace-separated minutes -> positive numbers; [] when none parse.
@@ -39,6 +40,7 @@ function normalizeConfig(raw = {}) {
       : Math.min(0.97, Math.max(0.80, Number(c.desiredRetention))),
     rolloverHour: isNaN(c.rolloverHour) ? DEFAULT_CONFIG.rolloverHour : clampInt(c.rolloverHour, 0, 23),
     learnAheadMins: DEFAULT_CONFIG.learnAheadMins,
+    leechThreshold: DEFAULT_CONFIG.leechThreshold,
   };
 }
 
