@@ -37,7 +37,7 @@ function normalizeConfig(raw = {}) {
     learnSteps: learn.length ? learn : DEFAULT_CONFIG.learnSteps.slice(),
     relearnSteps: relearn.length ? relearn : DEFAULT_CONFIG.relearnSteps.slice(),
     desiredRetention: isNaN(c.desiredRetention) ? DEFAULT_CONFIG.desiredRetention
-      : Math.min(0.97, Math.max(0.80, Number(c.desiredRetention))),
+      : Math.min(0.99, Math.max(0.70, Number(c.desiredRetention))),
     rolloverHour: isNaN(c.rolloverHour) ? DEFAULT_CONFIG.rolloverHour : clampInt(c.rolloverHour, 0, 23),
     learnAheadMins: DEFAULT_CONFIG.learnAheadMins,
     leechThreshold: DEFAULT_CONFIG.leechThreshold,

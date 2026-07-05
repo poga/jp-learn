@@ -524,8 +524,8 @@ test('config: formatSteps round-trips with parseSteps', () => {
 });
 
 test('config: normalizeConfig clamps each field to its valid range', () => {
-  assert.equal(normalizeConfig({ desiredRetention: 1.5 }).desiredRetention, 0.97);
-  assert.equal(normalizeConfig({ desiredRetention: 0.1 }).desiredRetention, 0.80);
+  assert.equal(normalizeConfig({ desiredRetention: 1.5 }).desiredRetention, 0.99);
+  assert.equal(normalizeConfig({ desiredRetention: 0.1 }).desiredRetention, 0.70);
   assert.equal(normalizeConfig({ newPerDay: -5 }).newPerDay, 0);
   assert.equal(normalizeConfig({ newPerDay: 12.6 }).newPerDay, 13);   // rounded int
   assert.equal(normalizeConfig({ rolloverHour: 30 }).rolloverHour, 23);
