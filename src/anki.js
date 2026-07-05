@@ -1,6 +1,7 @@
 import { KANA } from './kana.js';
 import { newCard, schedule, previewIntervals, isLeech, DAY_MS } from './fsrs.js';
 import { newStats, recordReview, recordNew, reviewsOn, recordLog,
+  unrecordReview, unrecordNew, unrecordLog,
   currentStreak, bestStreak, retention } from './stats.js';
 import { pickNext, counts as queueCounts, cramAdvance } from './queue.js';
 import { dayOf } from './day.js';
@@ -92,6 +93,41 @@ function applyPref() {
 let active = [], current = null, flipped = false, reviewed = 0;
 let mode = 'normal', extraNew = 0, cramQueue = [], crammed = 0;
 const STUDY_MORE_N = 10;
+let undoStack = [];
+const UNDO_CAP = 100;
+const undoBtn = $('undo');
+
+function pushUndo(entry) {
+  undoStack.push(entry);
+  if (undoStack.length > UNDO_CAP) undoStack.shift();
+  undoBtn.hidden = false;
+}
+
+function clearUndo() { undoStack = []; undoBtn.hidden = true; }
+
+// Anki-style undo: restore the card, reverse the stats, show it again.
+function undo() {
+  const e = undoStack.pop();
+  if (!e) return;
+  undoBtn.hidden = undoStack.length === 0;
+  stage.hidden = false; doneEl.hidden = true;
+  flipped = false;
+  if (e.kind === 'cram') {
+    cramQueue = e.queue;
+    crammed = Math.max(0, crammed - 1);
+    current = cramQueue[0];
+    return render();
+  }
+  store[e.id] = e.prev;
+  unrecordReview(stats, e.grade, e.day, e.wasReview);
+  if (e.wasNew) unrecordNew(stats, e.day);
+  unrecordLog(stats);
+  saveStore(); saveStats();
+  reviewed = Math.max(0, reviewed - 1);
+  current = e.id;
+  updateStreak();
+  render();
+}
 
 // Effective config for the session: Custom Study can raise today's new limit.
 const sessionConfig = () => ({ ...CONFIG, newPerDay: CONFIG.newPerDay + extraNew });
@@ -169,17 +205,20 @@ function flip() {
 function grade(g) {
   if (!flipped || !current) return;
   if (mode === 'cram') {
+    pushUndo({ kind: 'cram', queue: cramQueue });
     cramQueue = cramAdvance(cramQueue, g);
     crammed++;
     return next();
   }
   const before = stateFor(current);
   const t = now();
+  const day = dayOf(t, CONFIG.rolloverHour);
+  pushUndo({ kind: 'grade', id: current, prev: { ...before }, day, grade: g,
+    wasNew: before.state === 'new', wasReview: before.state === 'review' });
   const after = schedule(before, g, t, CONFIG);
   if (before.state === 'review' && g === 'again'
       && isLeech(after.lapses, CONFIG.leechThreshold)) after.suspended = true;
   store[current] = after;
-  const day = dayOf(t, CONFIG.rolloverHour);
   if (before.state === 'new') recordNew(stats, day);
   recordReview(stats, g, day, before.state === 'review');
   recordLog(stats, { id: current, t, grade: g, state: before.state });
@@ -275,6 +314,7 @@ function showDone(done = { learning: 0, dueDay: null, revHidden: 0 }) {
 }
 
 function startSession() {
+  clearUndo();
   mode = 'normal'; extraNew = 0;
   stage.hidden = false; doneEl.hidden = true;
   buildSession();
@@ -289,6 +329,7 @@ function studyMoreNew() {
 
 // Cram: drill the whole deck, shuffled, with no effect on the schedule.
 function startCram() {
+  clearUndo();
   mode = 'cram'; cramQueue = shuffle(deckCards().filter(id => !stateFor(id).suspended));
   crammed = 0;
   stage.hidden = false; doneEl.hidden = true;
@@ -350,8 +391,11 @@ gradesEl.querySelectorAll('button').forEach(b =>
   b.addEventListener('click', () => grade(b.dataset.grade)));
 deckBar.querySelectorAll('input').forEach(i =>
   i.addEventListener('change', () => { savePref(); startSession(); }));
+undoBtn.addEventListener('click', undo);
 
 document.addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT') return;
+  if (ev.key === 'z' || ev.key === 'Z') { ev.preventDefault(); return undo(); }
   if (!doneEl.hidden || !current) return;
   if (!flipped) {
     if (ev.code === 'Space' || ev.code === 'Enter') { ev.preventDefault(); flip(); }

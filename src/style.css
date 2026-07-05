@@ -248,6 +248,20 @@ main.anki { max-width: 480px; }
   border-color: var(--again);
   opacity: 1;
 }
+.undo-btn {
+  display: block;
+  margin: -.75rem auto .75rem;
+  font: inherit;
+  font-size: .8rem;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  padding: .25rem .8rem;
+  opacity: .5;
+  cursor: pointer;
+}
+.undo-btn:hover { opacity: .8; }
 
 .options { max-width: 22rem; margin: 0 auto 1.25rem; font-size: .9rem; }
 .options summary { cursor: pointer; text-align: center; opacity: .55; list-style: none; }
