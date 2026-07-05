@@ -36,6 +36,31 @@ function recordLog(stats, entry, cap = 5000) {
   return stats;
 }
 
+// Reverse one recorded review; floors at zero so undo can't go negative.
+function unrecordReview(stats, grade, day, wasReview = false) {
+  stats.reviews = Math.max(0, stats.reviews - 1);
+  if (grade === 'again') stats.again = Math.max(0, stats.again - 1);
+  const d = stats.days[day];
+  if (!d) return stats;
+  d.n = Math.max(0, d.n - 1);
+  if (wasReview) d.rev = Math.max(0, (d.rev || 0) - 1);
+  if (grade === 'again') d.again = Math.max(0, d.again - 1);
+  return stats;
+}
+
+// Reverse one recorded new-card introduction.
+function unrecordNew(stats, day) {
+  const d = stats.days[day];
+  if (d && d.new) d.new -= 1;
+  return stats;
+}
+
+// Drop the most recent log entry.
+function unrecordLog(stats) {
+  if (Array.isArray(stats.log)) stats.log.pop();
+  return stats;
+}
+
 // New cards introduced on a given day.
 function newOn(stats, day) {
   return stats.days[day] && stats.days[day].new ? stats.days[day].new : 0;
@@ -76,4 +101,5 @@ function retention(stats) {
 }
 
 export { newStats, recordReview, recordNew, newOn, revDoneOn, reviewsOn,
-  recordLog, currentStreak, bestStreak, retention };
+  recordLog, unrecordReview, unrecordNew, unrecordLog, currentStreak, bestStreak,
+  retention };

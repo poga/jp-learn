@@ -6,7 +6,8 @@ import path from 'node:path';
 import esbuild from 'esbuild';
 import { matchRomaji, KANA, LAYOUT } from './src/kana.js';
 import { newStats, recordReview, recordNew, newOn, reviewsOn, currentStreak,
-  bestStreak, retention, revDoneOn, recordLog } from './src/stats.js';
+  bestStreak, retention, revDoneOn, recordLog, unrecordReview, unrecordNew,
+  unrecordLog } from './src/stats.js';
 import * as fsrs from './src/fsrs.js';
 import { dayOf, dayStart } from './src/day.js';
 import { build } from './build.js';
@@ -140,6 +141,34 @@ test('stats: recordLog works on a migrated stats object missing the log field', 
   const migrated = Object.assign(newStats(), JSON.parse('{"reviews":3,"again":1,"days":{}}'));
   recordLog(migrated, { id: 'a:hira', t: 1, grade: 'good', state: 'new' });
   assert.equal(migrated.log.length, 1);
+});
+
+test('stats: unrecord* reverses record* as seen by every reader', () => {
+  const s = newStats();
+  recordReview(s, 'good', 10, true);
+  recordNew(s, 10);
+  recordReview(s, 'again', 10, false);
+  recordLog(s, { id: 'x', t: 1, grade: 'again', state: 'new' });
+  unrecordLog(s);
+  unrecordReview(s, 'again', 10, false);
+  unrecordNew(s, 10);
+  assert.equal(s.reviews, 1);
+  assert.equal(s.again, 0);
+  assert.equal(reviewsOn(s, 10), 1);
+  assert.equal(revDoneOn(s, 10), 1);
+  assert.equal(newOn(s, 10), 0);
+  assert.equal(s.log.length, 0);
+  assert.equal(retention(s), 1);      // the lapse vanished from retention
+});
+
+test('stats: unrecord floors at zero on empty stats', () => {
+  const s = newStats();
+  unrecordReview(s, 'again', 5, true);
+  unrecordNew(s, 5);
+  unrecordLog(s);
+  assert.equal(s.reviews, 0);
+  assert.equal(s.again, 0);
+  assert.equal(reviewsOn(s, 5), 0);
 });
 
 test('fsrs: retrievability is 0.9 at t = S and decays', () => {
