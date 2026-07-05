@@ -485,6 +485,18 @@ test('queue: counts are limit-capped and agree with the queue', () => {
   assert.equal(c.due, 2);                                   // 3 due reviews capped at 2
 });
 
+test('queue: suspended cards are invisible to picks, counts, and due hints', () => {
+  const cards = [{ ...newC('n1'), suspended: true },
+    { ...learnC('l1', QNOW - 1000), suspended: true },
+    { ...revC('r1', QNOW - 1000), suspended: true }];
+  const p = pickNext({ cards, stats: newStats(), config: cfg, now: QNOW });
+  assert.equal(p.kind, 'done');
+  assert.equal(p.learning, 0);
+  assert.equal(p.dueDay, null);                     // nothing upcoming either
+  const c = counts({ cards, stats: newStats(), config: cfg, now: QNOW });
+  assert.deepEqual(c, { newLeft: 0, learning: 0, due: 0 });
+});
+
 test('queue: cramAdvance drops the front card; Again re-drills it at the back', () => {
   assert.deepEqual(cramAdvance(['a', 'b', 'c'], 'good'), ['b', 'c']);
   assert.deepEqual(cramAdvance(['a', 'b', 'c'], 'easy'), ['b', 'c']);

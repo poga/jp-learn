@@ -18,6 +18,7 @@ function cramAdvance(queue, grade) {
 function partition(cards, cfg, now, today) {
   const readyLearn = [], pendingLearn = [], fresh = [], dueRev = [];
   for (const c of cards) {
+    if (c.suspended) continue;
     if (isLearn(c.state)) (c.due <= now ? readyLearn : pendingLearn).push(c);
     else if (c.state === 'new') fresh.push(c);
     else if (dayOf(c.due, cfg.rolloverHour) <= today) dueRev.push(c);
@@ -34,6 +35,7 @@ function nextDueDay(cards, cfg, today, newDone) {
   const canNew = newDone < cfg.newPerDay;
   let min = null;
   for (const c of cards) {
+    if (c.suspended) continue;
     let d = null;
     if (c.state === 'new') d = canNew ? today : today + 1;
     else if (c.state === 'review') {
