@@ -250,6 +250,21 @@ test('fsrs: Again on a review card lapses into relearning at the 10m step', () =
   assert.equal(lapsed.due - T, 10 * MIN);
 });
 
+test('fsrs: Hard repeats the current learning step; lone step is x1.5', () => {
+  const cfg3 = { newPerDay: 20, reviewsPerDay: 200, learnSteps: [1, 10, 60],
+    relearnSteps: [10], desiredRetention: 0.9, rolloverHour: 4, learnAheadMins: 20 };
+  const mid = { state: 'learning', stability: 1, difficulty: 5,
+    due: T, last_review: T - MIN, reps: 0, lapses: 0, step: 1 };
+  const h = fsrs.schedule(mid, 'hard', T, cfg3);
+  assert.equal(h.due - T, 10 * MIN);                // repeats the 10m step
+  assert.equal(h.step, 1);                          // Hard never advances
+  const lone = fsrs.schedule(fsrs.newCard(), 'hard', T,
+    { ...cfg3, learnSteps: [10] });
+  assert.equal(lone.due - T, 15 * MIN);             // lone step x1.5
+  const first = fsrs.schedule(fsrs.newCard(), 'hard', T); // default steps 1 10
+  assert.equal(first.due - T, 5.5 * MIN);           // first of two: average
+});
+
 test('fsrs: preview intervals are strictly increasing (no Good/Easy tie)', () => {
   const card = { state: 'review', stability: 1, difficulty: 5,
     due: T, last_review: T - fsrs.DAY_MS, reps: 2, lapses: 0, step: 0 };

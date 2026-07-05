@@ -128,8 +128,10 @@ function transition(card, grade, now, cfg = DEFAULT_CONFIG) {
     const i = from === 'new' ? 0 : card.step;
     if (g === 1) { c.step = 0; c.due = now + steps[0]; }
     else if (g === 2) {
-      const delay = i + 1 < steps.length
-        ? (steps[i] + steps[i + 1]) / 2 : steps[i] * 1.5;
+      // Hard repeats the step; step 0 averages the first two, lone step x1.5.
+      const delay = i === 0
+        ? (steps.length > 1 ? (steps[0] + steps[1]) / 2 : steps[0] * 1.5)
+        : steps[i];
       c.step = i; c.due = now + delay;
     } else {
       c.step = i + 1;
