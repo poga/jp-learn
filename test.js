@@ -669,3 +669,19 @@ test('generate produces well-formed, uniquely-ided entries from real CSVs', () =
     assert.ok(Array.isArray(e.furigana) && e.furigana.length > 0);
   }
 });
+
+import { VOCAB } from './src/vocab-data.js';
+import { LEVELS, idsForLevels } from './src/vocab-deck.js';
+
+test('idsForLevels selects only the requested levels, over real data', () => {
+  const n5 = idsForLevels(VOCAB, ['N5']);
+  assert.ok(n5.length > 0);
+  assert.ok(n5.every(id => VOCAB.find(v => v.id === id).level === 'N5'));
+  assert.equal(idsForLevels(VOCAB, []).length, 0);
+  assert.equal(idsForLevels(VOCAB, ['N5', 'N4']).length,
+    idsForLevels(VOCAB, ['N5']).length + idsForLevels(VOCAB, ['N4']).length);
+});
+
+test('LEVELS covers N5 through N1', () => {
+  assert.deepEqual(LEVELS, ['N5', 'N4', 'N3', 'N2', 'N1']);
+});
