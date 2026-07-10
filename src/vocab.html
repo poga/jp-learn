@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>五十音 アンキ</title>
+  <title>語彙 アンキ</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)">
@@ -11,19 +11,22 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="アンキ">
+  <meta name="apple-mobile-web-app-title" content="語彙">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
 </head>
-<body class="anki-body">
+<body class="anki-body vocab-body">
   <header>
-    <h1>五十音 アンキ</h1>
-    <nav class="page-nav"><a href="index.html">▸ 五十音 table</a> · <a href="vocab.html">▸ 語彙 アンキ</a></nav>
+    <h1>語彙 アンキ</h1>
+    <nav class="page-nav"><a href="anki.html">▸ 五十音 アンキ</a></nav>
   </header>
 
   <main id="app" class="anki">
     <div class="deck-bar" id="deck-bar">
-      <label><input type="checkbox" name="script" value="hira" checked> 平仮名</label>
-      <label><input type="checkbox" name="script" value="kata" checked> 片仮名</label>
+      <label><input type="checkbox" name="level" value="N5" checked> N5</label>
+      <label><input type="checkbox" name="level" value="N4"> N4</label>
+      <label><input type="checkbox" name="level" value="N3"> N3</label>
+      <label><input type="checkbox" name="level" value="N2"> N2</label>
+      <label><input type="checkbox" name="level" value="N1"> N1</label>
     </div>
 
     <details class="options" id="options">
@@ -80,6 +83,6 @@
     <p class="credit">vocab from JMdict / Tanos JLPT lists · CC BY-SA 4.0</p>
   </footer>
 
-  <script type="module" src="anki.js"></script>
+  <script type="module" src="vocab.js"></script>
 </body>
 </html>

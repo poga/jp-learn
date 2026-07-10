@@ -10,7 +10,7 @@ import {
 const ROOT = import.meta.dirname;
 const SRC = path.join(ROOT, 'src');
 const DIST = path.join(ROOT, 'dist');
-const PAGES = ['index.html', 'anki.html'];
+const PAGES = ['index.html', 'anki.html', 'vocab.html'];
 const ICONS = ['icon-192.png', 'icon-512.png', 'icon.svg', 'apple-touch-icon.png'];
 
 const hash8 = buf => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 8);
@@ -32,6 +32,7 @@ async function bundleCode() {
     entryPoints: [
       path.join(SRC, 'script.js'),
       path.join(SRC, 'anki.js'),
+      path.join(SRC, 'vocab.js'),
       path.join(SRC, 'style.css'),
     ],
     bundle: true, minify: true, format: 'esm',

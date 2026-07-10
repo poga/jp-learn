@@ -282,3 +282,9 @@ main.anki { max-width: 480px; }
 }
 .opt-btn:hover { opacity: 1; }
 .done .grade { display: block; width: 100%; max-width: 16rem; margin: .5rem auto 0; }
+
+/* vocab cards hold whole words, not one glyph — smaller face + ruby */
+.vocab-body .card-face { font-size: 2.75rem; }
+.vocab-body .card-face rt { font-size: .36em; opacity: .85; }
+.vocab-body .card-reading { font-size: 1.3rem; }
+.credit { font-size: .7rem; opacity: .4; margin: .75rem 0 0; }

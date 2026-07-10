@@ -685,3 +685,13 @@ test('idsForLevels selects only the requested levels, over real data', () => {
 test('LEVELS covers N5 through N1', () => {
   assert.deepEqual(LEVELS, ['N5', 'N4', 'N3', 'N2', 'N1']);
 });
+
+test('build emits a vocab page that bundles vocab.js and the data', async () => {
+  const { refMap } = await build();
+  assert.ok(refMap['vocab.js'], 'vocab.js is a hashed entry');
+  const dist = path.join(import.meta.dirname, 'dist');
+  const html = fs.readFileSync(path.join(dist, 'vocab.html'), 'utf8');
+  assert.match(html, new RegExp(refMap['vocab.js']), 'page references hashed vocab.js');
+  const bundle = fs.readFileSync(path.join(dist, refMap['vocab.js']), 'utf8');
+  assert.match(bundle, /v:/, 'VOCAB data is bundled into the page');
+});
