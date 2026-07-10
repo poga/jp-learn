@@ -636,3 +636,36 @@ test('rubyHTML renders ruby for kanji and plain text for kana', () => {
 test('escapeHtml neutralizes meaning punctuation', () => {
   assert.equal(escapeHtml('to be <x> & "y"'), 'to be &lt;x&gt; &amp; &quot;y&quot;');
 });
+
+import { parseCsv, buildVocab, generate } from './scripts/gen-vocab.js';
+
+test('parseCsv keeps commas inside quoted fields', () => {
+  const rows = parseCsv('a,b,c\n会う,あう,"to meet, to see"\n');
+  assert.deepEqual(rows[1], ['会う', 'あう', 'to meet, to see']);
+});
+
+test('buildVocab dedupes by guid and keeps the easiest level', () => {
+  const header = ['expression', 'reading', 'meaning', 'tags', 'guid'];
+  const v = buildVocab([
+    { level: 'N5', rows: [header, ['水', 'みず', 'water', 't', 'G1']] },
+    { level: 'N3', rows: [header, ['水', 'みず', 'water', 't', 'G1']] },
+  ]);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].level, 'N5');
+  assert.deepEqual(v[0], {
+    id: 'v:G1', word: '水', reading: 'みず', meaning: 'water', level: 'N5',
+    furigana: [{ t: '水', r: 'みず' }],
+  });
+});
+
+test('generate produces well-formed, uniquely-ided entries from real CSVs', () => {
+  const v = generate('./data/jlpt');
+  assert.ok(v.length > 5000, `expected >5000 entries, got ${v.length}`);
+  assert.equal(new Set(v.map(e => e.id)).size, v.length, 'ids unique');
+  for (const e of v.slice(0, 50)) {
+    assert.match(e.id, /^v:/);
+    assert.ok(e.word && e.reading && e.meaning);
+    assert.match(e.level, /^N[1-5]$/);
+    assert.ok(Array.isArray(e.furigana) && e.furigana.length > 0);
+  }
+});
