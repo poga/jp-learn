@@ -7,10 +7,10 @@ import { dayOf } from './day.js';
 import { normalizeConfig, parseSteps, formatSteps } from './config.js';
 import './pwa.js';
 
-// Generic Anki-style trainer shell. A deck spec supplies data, deck-bar, render.
+// Generic Anki-style trainer shell; deck spec supplies data, bar, render.
 export function createTrainer(spec) {
   const STORE_KEY = spec.keys.store, STATS_KEY = spec.keys.stats;
-  const PREF_KEY = spec.keys.pref, CONFIG_KEY = spec.keys.config;
+  const CONFIG_KEY = spec.keys.config;
   const MATURE_DAYS = 21, STUDY_MORE_N = 10, UNDO_CAP = 100;
 
   function loadConfig() {
@@ -286,7 +286,7 @@ export function createTrainer(spec) {
     buildSession();
   }
 
-  // Custom Study: raise today's new limit and keep going (reschedules normally).
+  // Custom Study: raise today's new limit, keep going (reschedules normally).
   function studyMoreNew() {
     extraNew += STUDY_MORE_N;
     stage.hidden = false; doneEl.hidden = true;
@@ -374,7 +374,7 @@ export function createTrainer(spec) {
     else if (ev.key === '4') grade('easy');
   });
 
-  // On foreground return re-pick: a learning card ripened while asleep shows at once.
+  // On foreground return, re-pick: a card that ripened while asleep shows now.
   function resume() {
     if (doneEl.hidden && !current) next();
   }
@@ -387,7 +387,8 @@ export function createTrainer(spec) {
   resetBtn.addEventListener('click', () => {
     if (resetArm) {
       clearTimeout(resetArm);
-      try { localStorage.clear(); } catch (e) {}
+      try { for (const k of Object.values(spec.keys)) localStorage.removeItem(k); }
+      catch (e) {}
       location.reload();
       return;
     }
