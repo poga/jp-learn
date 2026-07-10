@@ -609,3 +609,30 @@ test('config: normalizeConfig merges a partial blob over defaults', () => {
   assert.equal(c.learnAheadMins, DEFAULT_CONFIG.learnAheadMins);
   assert.equal(normalizeConfig({ leechThreshold: 3 }).leechThreshold, 8);
 });
+
+import { alignFurigana, rubyHTML, escapeHtml } from './src/furigana.js';
+
+test('furigana: peels okurigana so only the kanji core carries reading', () => {
+  assert.deepEqual(alignFurigana('会う', 'あう'), [{ t: '会', r: 'あ' }, { t: 'う', r: '' }]);
+});
+
+test('furigana: single kanji takes the whole reading', () => {
+  assert.deepEqual(alignFurigana('水', 'みず'), [{ t: '水', r: 'みず' }]);
+});
+
+test('furigana: all-kana word gets no ruby', () => {
+  assert.deepEqual(alignFurigana('ああ', 'ああ'), [{ t: 'ああ', r: '' }]);
+});
+
+test('furigana: multi-kanji block gets one ruby span', () => {
+  assert.deepEqual(alignFurigana('日本', 'にほん'), [{ t: '日本', r: 'にほん' }]);
+});
+
+test('rubyHTML renders ruby for kanji and plain text for kana', () => {
+  assert.equal(rubyHTML(alignFurigana('会う', 'あう')), '<ruby>会<rt>あ</rt></ruby>う');
+  assert.equal(rubyHTML(alignFurigana('ああ', 'ああ')), 'ああ');
+});
+
+test('escapeHtml neutralizes meaning punctuation', () => {
+  assert.equal(escapeHtml('to be <x> & "y"'), 'to be &lt;x&gt; &amp; &quot;y&quot;');
+});
