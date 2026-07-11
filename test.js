@@ -670,6 +670,16 @@ test('generate produces well-formed, uniquely-ided entries from real CSVs', () =
   }
 });
 
+test('buildVocab prefers zh-tw gloss by guid, falls back to English', () => {
+  const header = ['expression', 'reading', 'meaning', 'tags', 'guid'];
+  const v = buildVocab([{ level: 'N5', rows: [header,
+    ['犬', 'いぬ', 'dog', 'JLPT', 'g1'],
+    ['猫', 'ねこ', 'cat', 'JLPT', 'g2']] }], { g1: '狗' });
+  const meanings = Object.fromEntries(v.map(e => [e.id, e.meaning]));
+  assert.equal(meanings['v:g1'], '狗');
+  assert.equal(meanings['v:g2'], 'cat');
+});
+
 import { VOCAB } from './src/vocab-data.js';
 import { LEVELS, idsForLevels } from './src/vocab-deck.js';
 

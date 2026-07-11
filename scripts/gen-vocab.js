@@ -24,7 +24,7 @@ export function parseCsv(text) {
 }
 
 // Rows -> deduped entries; a guid keeps its easiest level (easy files first).
-export function buildVocab(fileRows) {
+export function buildVocab(fileRows, zh = {}) {
   const byGuid = new Map();
   for (const { level, rows } of fileRows) {
     const [header, ...data] = rows;
@@ -37,7 +37,7 @@ export function buildVocab(fileRows) {
       if (prev && RANK[prev.level] <= RANK[level]) continue;
       const word = r[col.expression], reading = r[col.reading];
       byGuid.set(guid, {
-        id: 'v:' + guid, word, reading, meaning: r[col.meaning], level,
+        id: 'v:' + guid, word, reading, meaning: zh[guid] ?? r[col.meaning], level,
         furigana: alignFurigana(word, reading),
       });
     }
@@ -46,9 +46,12 @@ export function buildVocab(fileRows) {
 }
 
 export function generate(dir) {
+  const zhPath = path.join(dir, 'zh-tw.json');
+  const zh = fs.existsSync(zhPath)
+    ? JSON.parse(fs.readFileSync(zhPath, 'utf8')) : {};
   return buildVocab(FILES.map(([file, level]) => ({
     level, rows: parseCsv(fs.readFileSync(path.join(dir, file), 'utf8')),
-  })));
+  })), zh);
 }
 
 const isMain = process.argv[1] && fs.realpathSync(process.argv[1]) === import.meta.filename;
