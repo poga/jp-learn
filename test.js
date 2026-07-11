@@ -685,9 +685,28 @@ test('every vocab entry has a Traditional-Chinese gloss', () => {
   const entries = generate('./data/jlpt');
   const missing = entries.filter(e => !zh[e.id.slice(2)]?.trim());
   assert.equal(missing.length, 0, `no gloss: ${missing.slice(0, 5).map(e => e.word)}`);
-  const simplified = /[见说读语门问间们发东车马鸟鱼时书长乐爱写还这进远点战给让对业电头实现设备条务报员钱纸网络习]/;
+  // high-frequency simplified-only chars; each traditional form differs
+  const SIMPLIFIED_ONLY = '见说读语门问间们发东车马鸟鱼时书长乐爱写还这进远点战给让' +
+    '对业电头实现设备条务报员钱纸网络习' +
+    '国学会产变处应当总统历级须词汉击园艺态龙风飞' +
+    '来万与为义两严丰尔复宁礼议讯记讲许论请谁谢课认识证该详误谈调谅' +
+    '购贵贸费财责质贫' +
+    '线纯组细终经结继绝综绍绩绿缘编缩维' +
+    '铁银钢铜错锁锦键钟' +
+    '顶项顺预领颜题额颗频颁颂' +
+    '饭馆饮饱饿饼饺' +
+    '骂骑验驾驶驻' +
+    '鸡鸭鹅鸦' +
+    '轻转较轮输软' +
+    '闪闭闻阔闲' +
+    '从众华归举兴争显观欢权劝仅医势执数虽随难达迁选递忧惊惯灵层' +
+    '岁龟参乱亏亲优伟传伤灭灯别';
+  const simplified = new RegExp(`[${SIMPLIFIED_ONLY}]`);
   const kana = /[ぁ-ゖァ-ヺー]/;
-  const bad = Object.values(zh).filter(v => simplified.test(v) || kana.test(v));
+  // X光 (X-ray) is the one legitimate ASCII-letter exception
+  const latin = /[a-zA-Z]/;
+  const bad = Object.values(zh).filter(v => simplified.test(v) || kana.test(v) ||
+    latin.test(v.replaceAll('X光', '')));
   assert.equal(bad.length, 0, `not zh-TW: ${bad.slice(0, 5)}`);
 });
 
