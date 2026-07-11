@@ -734,4 +734,5 @@ test('build emits a vocab page that bundles vocab.js and the data', async () => 
   assert.match(html, new RegExp(refMap['vocab.js']), 'page references hashed vocab.js');
   const bundle = fs.readFileSync(path.join(dist, refMap['vocab.js']), 'utf8');
   assert.match(bundle, /v:/, 'VOCAB data is bundled into the page');
+  assert.match(bundle, /zh-Hant/, 'back is tagged zh-Hant');
 });
