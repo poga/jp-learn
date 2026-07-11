@@ -32,7 +32,7 @@ createTrainer({
   renderCard: v => ({
     badge: v.level,
     front: rubyHTML(v.furigana),
-    back: escapeHtml(v.meaning),
+    back: `<span lang="zh-Hant">${escapeHtml(v.meaning)}</span>`,
   }),
   emptyDeckHint: '<p class="done-note">tick a JLPT level above.</p>',
 });
