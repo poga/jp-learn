@@ -680,6 +680,17 @@ test('buildVocab prefers zh-tw gloss by guid, falls back to English', () => {
   assert.equal(meanings['v:g2'], 'cat');
 });
 
+test('every vocab entry has a Traditional-Chinese gloss', () => {
+  const zh = JSON.parse(fs.readFileSync('./data/jlpt/zh-tw.json', 'utf8'));
+  const entries = generate('./data/jlpt');
+  const missing = entries.filter(e => !zh[e.id.slice(2)]?.trim());
+  assert.equal(missing.length, 0, `no gloss: ${missing.slice(0, 5).map(e => e.word)}`);
+  const simplified = /[见说读语门问间们发东车马鸟鱼时书长乐爱写还这进远点战给让对业电头实现设备条务报员钱纸网络习]/;
+  const kana = /[ぁ-ゖァ-ヺー]/;
+  const bad = Object.values(zh).filter(v => simplified.test(v) || kana.test(v));
+  assert.equal(bad.length, 0, `not zh-TW: ${bad.slice(0, 5)}`);
+});
+
 import { VOCAB } from './src/vocab-data.js';
 import { LEVELS, idsForLevels } from './src/vocab-deck.js';
 
