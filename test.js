@@ -347,13 +347,13 @@ function pageRefs(page) {
 }
 
 test('build: pages reference only files present in dist', () => {
-  for (const page of ['index.html', 'anki.html'])
+  for (const page of ['index.html', 'anki.html', 'vocab.html'])
     for (const ref of pageRefs(page))
       assert.ok(fs.existsSync(path.join(DIST, ref)), `${page} -> missing ${ref}`);
 });
 
 test('build: asset refs are content-hashed and match their content', () => {
-  for (const page of ['index.html', 'anki.html'])
+  for (const page of ['index.html', 'anki.html', 'vocab.html'])
     for (const ref of pageRefs(page)) {
       if (ref.endsWith('.html')) continue; // page-to-page nav links stay plain
       const m = ref.match(/-([0-9a-f]{8})\.(js|css|png|svg|webmanifest)$/);
@@ -364,9 +364,9 @@ test('build: asset refs are content-hashed and match their content', () => {
 });
 
 test('build: no bare asset names leak into HTML', () => {
-  const bare = ['style.css', 'script.js', 'anki.js', 'manifest.webmanifest',
+  const bare = ['style.css', 'script.js', 'anki.js', 'vocab.js', 'manifest.webmanifest',
     'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon.svg'];
-  for (const page of ['index.html', 'anki.html']) {
+  for (const page of ['index.html', 'anki.html', 'vocab.html']) {
     const html = fs.readFileSync(path.join(DIST, page), 'utf8');
     for (const b of bare) assert.ok(!html.includes(`"${b}"`), `${page} still references ${b}`);
   }
@@ -400,7 +400,7 @@ test('build: sw is network-first for navigations, cache-first otherwise', () => 
 });
 
 test('build: both pages link manifest, apple-touch-icon, and a module script', () => {
-  for (const page of ['index.html', 'anki.html']) {
+  for (const page of ['index.html', 'anki.html', 'vocab.html']) {
     const html = fs.readFileSync(path.join(DIST, page), 'utf8');
     assert.match(html, /rel="manifest"/);
     assert.match(html, /rel="apple-touch-icon"/);
@@ -608,4 +608,90 @@ test('config: normalizeConfig merges a partial blob over defaults', () => {
   assert.equal(c.rolloverHour, DEFAULT_CONFIG.rolloverHour);
   assert.equal(c.learnAheadMins, DEFAULT_CONFIG.learnAheadMins);
   assert.equal(normalizeConfig({ leechThreshold: 3 }).leechThreshold, 8);
+});
+
+import { alignFurigana, rubyHTML, escapeHtml } from './src/furigana.js';
+
+test('furigana: peels okurigana so only the kanji core carries reading', () => {
+  assert.deepEqual(alignFurigana('会う', 'あう'), [{ t: '会', r: 'あ' }, { t: 'う', r: '' }]);
+});
+
+test('furigana: single kanji takes the whole reading', () => {
+  assert.deepEqual(alignFurigana('水', 'みず'), [{ t: '水', r: 'みず' }]);
+});
+
+test('furigana: all-kana word gets no ruby', () => {
+  assert.deepEqual(alignFurigana('ああ', 'ああ'), [{ t: 'ああ', r: '' }]);
+});
+
+test('furigana: multi-kanji block gets one ruby span', () => {
+  assert.deepEqual(alignFurigana('日本', 'にほん'), [{ t: '日本', r: 'にほん' }]);
+});
+
+test('rubyHTML renders ruby for kanji and plain text for kana', () => {
+  assert.equal(rubyHTML(alignFurigana('会う', 'あう')), '<ruby>会<rt>あ</rt></ruby>う');
+  assert.equal(rubyHTML(alignFurigana('ああ', 'ああ')), 'ああ');
+});
+
+test('escapeHtml neutralizes meaning punctuation', () => {
+  assert.equal(escapeHtml('to be <x> & "y"'), 'to be &lt;x&gt; &amp; &quot;y&quot;');
+});
+
+import { parseCsv, buildVocab, generate } from './scripts/gen-vocab.js';
+
+test('parseCsv keeps commas inside quoted fields', () => {
+  const rows = parseCsv('a,b,c\n会う,あう,"to meet, to see"\n');
+  assert.deepEqual(rows[1], ['会う', 'あう', 'to meet, to see']);
+});
+
+test('buildVocab dedupes by guid and keeps the easiest level', () => {
+  const header = ['expression', 'reading', 'meaning', 'tags', 'guid'];
+  const v = buildVocab([
+    { level: 'N5', rows: [header, ['水', 'みず', 'water', 't', 'G1']] },
+    { level: 'N3', rows: [header, ['水', 'みず', 'water', 't', 'G1']] },
+  ]);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].level, 'N5');
+  assert.deepEqual(v[0], {
+    id: 'v:G1', word: '水', reading: 'みず', meaning: 'water', level: 'N5',
+    furigana: [{ t: '水', r: 'みず' }],
+  });
+});
+
+test('generate produces well-formed, uniquely-ided entries from real CSVs', () => {
+  const v = generate('./data/jlpt');
+  assert.ok(v.length > 5000, `expected >5000 entries, got ${v.length}`);
+  assert.equal(new Set(v.map(e => e.id)).size, v.length, 'ids unique');
+  for (const e of v.slice(0, 50)) {
+    assert.match(e.id, /^v:/);
+    assert.ok(e.word && e.reading && e.meaning);
+    assert.match(e.level, /^N[1-5]$/);
+    assert.ok(Array.isArray(e.furigana) && e.furigana.length > 0);
+  }
+});
+
+import { VOCAB } from './src/vocab-data.js';
+import { LEVELS, idsForLevels } from './src/vocab-deck.js';
+
+test('idsForLevels selects only the requested levels, over real data', () => {
+  const n5 = idsForLevels(VOCAB, ['N5']);
+  assert.ok(n5.length > 0);
+  assert.ok(n5.every(id => VOCAB.find(v => v.id === id).level === 'N5'));
+  assert.equal(idsForLevels(VOCAB, []).length, 0);
+  assert.equal(idsForLevels(VOCAB, ['N5', 'N4']).length,
+    idsForLevels(VOCAB, ['N5']).length + idsForLevels(VOCAB, ['N4']).length);
+});
+
+test('LEVELS covers N5 through N1', () => {
+  assert.deepEqual(LEVELS, ['N5', 'N4', 'N3', 'N2', 'N1']);
+});
+
+test('build emits a vocab page that bundles vocab.js and the data', async () => {
+  const { refMap } = await build();
+  assert.ok(refMap['vocab.js'], 'vocab.js is a hashed entry');
+  const dist = path.join(import.meta.dirname, 'dist');
+  const html = fs.readFileSync(path.join(dist, 'vocab.html'), 'utf8');
+  assert.match(html, new RegExp(refMap['vocab.js']), 'page references hashed vocab.js');
+  const bundle = fs.readFileSync(path.join(dist, refMap['vocab.js']), 'utf8');
+  assert.match(bundle, /v:/, 'VOCAB data is bundled into the page');
 });

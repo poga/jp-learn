@@ -5,7 +5,8 @@
   "scripts": {
     "build": "node build.js",
     "dev": "node build.js --watch",
-    "test": "node test.js"
+    "test": "node test.js",
+    "gen:vocab": "node scripts/gen-vocab.js"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"
