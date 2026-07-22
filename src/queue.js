@@ -14,19 +14,36 @@ function cramAdvance(queue, grade) {
   return grade === 'again' ? [...rest, head] : rest;
 }
 
+const NONE = new Set();
+
 // Split the deck relative to `now`/`today` into the queues the picker draws from.
-function partition(cards, cfg, now, today) {
-  const readyLearn = [], pendingLearn = [], fresh = [], dueRev = [];
+// `ahead` holds review-ahead ids; they queue outside the daily review cap.
+function partition(cards, cfg, now, today, ahead = NONE) {
+  const readyLearn = [], pendingLearn = [], fresh = [], dueRev = [], aheadRev = [];
   for (const c of cards) {
     if (c.suspended) continue;
     if (isLearn(c.state)) (c.due <= now ? readyLearn : pendingLearn).push(c);
     else if (c.state === 'new') fresh.push(c);
     else if (dayOf(c.due, cfg.rolloverHour) <= today) dueRev.push(c);
+    else if (ahead.has(c.id)) aheadRev.push(c);
   }
   readyLearn.sort((a, b) => a.due - b.due);
   pendingLearn.sort((a, b) => a.due - b.due);
   dueRev.sort((a, b) => a.due - b.due);
-  return { readyLearn, pendingLearn, fresh, dueRev };
+  aheadRev.sort((a, b) => a.due - b.due);
+  return { readyLearn, pendingLearn, fresh, dueRev, aheadRev };
+}
+
+// Soonest future-due reviews, at least `min` when the deck holds that many.
+// A study-day is never split, so a batch is always whole days.
+function aheadBatch(cards, cfg, today, min = 10) {
+  const future = cards
+    .filter(c => !c.suspended && c.state === 'review'
+      && dayOf(c.due, cfg.rolloverHour) > today)
+    .sort((a, b) => a.due - b.due);
+  if (!future.length) return [];
+  const cutoff = dayOf(future[Math.min(future.length, min) - 1].due, cfg.rolloverHour);
+  return future.filter(c => dayOf(c.due, cfg.rolloverHour) <= cutoff).map(c => c.id);
 }
 
 // Earliest study-day with work given spent limits, or null; learning excluded.
@@ -47,10 +64,11 @@ function nextDueDay(cards, cfg, today, newDone, revDone) {
   return min;
 }
 
-function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId }) {
+function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId, ahead = NONE }) {
   const today = dayOf(now, config.rolloverHour);
   const newDone = newOn(stats, today), revDone = revDoneOn(stats, today);
-  const { readyLearn, pendingLearn, fresh, dueRev } = partition(cards, config, now, today);
+  const { readyLearn, pendingLearn, fresh, dueRev, aheadRev } =
+    partition(cards, config, now, today, ahead);
 
   if (readyLearn.length) return { kind: 'card', id: readyLearn[0].id };
 
@@ -64,6 +82,9 @@ function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId }) {
   if (newOpen) return { kind: 'card', id: fresh[0].id };
   if (revOpen) return { kind: 'card', id: dueRev[0].id };
 
+  // review-ahead is custom study: it runs only once today's own work is spent.
+  if (aheadRev.length) return { kind: 'card', id: aheadRev[0].id };
+
   // learn-ahead, skipping the just-answered card so Again/Hard advance not loop.
   if (pendingLearn.length) {
     const inWindow = pendingLearn.filter(c => c.due - now <= config.learnAheadMins * 60000);
@@ -75,15 +96,17 @@ function pickNext({ cards, stats, config = DEFAULT_CONFIG, now, lastId }) {
     dueDay: nextDueDay(cards, config, today, newDone, revDone) };
 }
 
-function counts({ cards, stats, config = DEFAULT_CONFIG, now }) {
+function counts({ cards, stats, config = DEFAULT_CONFIG, now, ahead = NONE }) {
   const today = dayOf(now, config.rolloverHour);
   const newDone = newOn(stats, today), revDone = revDoneOn(stats, today);
-  const { readyLearn, pendingLearn, fresh, dueRev } = partition(cards, config, now, today);
+  const { readyLearn, pendingLearn, fresh, dueRev, aheadRev } =
+    partition(cards, config, now, today, ahead);
   return {
     newLeft: Math.min(fresh.length, Math.max(0, config.newPerDay - newDone)),
     learning: readyLearn.length + pendingLearn.length,
-    due: Math.min(dueRev.length, Math.max(0, config.reviewsPerDay - revDone)),
+    due: Math.min(dueRev.length, Math.max(0, config.reviewsPerDay - revDone))
+      + aheadRev.length,
   };
 }
 
-export { pickNext, counts, cramAdvance };
+export { pickNext, counts, cramAdvance, aheadBatch };

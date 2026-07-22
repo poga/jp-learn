@@ -434,7 +434,7 @@ test('day: a review due-dated to tomorrow surfaces only next study-day', () => {
   assert.equal(dayOf(due, 4), dayOf(T, 4) + 1);
 });
 
-import { pickNext, counts, cramAdvance } from './src/queue.js';
+import { pickNext, counts, cramAdvance, aheadBatch } from './src/queue.js';
 
 const QDAY = 20000;
 const QNOW = dayStart(QDAY, 4) + 12 * 3600000; // midday on study-day 20000
@@ -574,6 +574,56 @@ test('queue: a spent review limit reports hidden reviews due tomorrow', () => {
   assert.equal(p.kind, 'done');
   assert.equal(p.revHidden, 2);
   assert.equal(p.dueDay, QDAY + 1);                 // hint says tomorrow, not silence
+});
+
+// A caught-up deck: everything learned, next reviews land on later study-days.
+const caughtUp = () => [revC('r1', dayStart(QDAY + 2, 4)), revC('r2', dayStart(QDAY + 2, 4)),
+  revC('r3', dayStart(QDAY + 5, 4))];
+
+test('queue: a caught-up deck stays done however often the session restarts', () => {
+  const cards = caughtUp();
+  for (let i = 0; i < 3; i++)                        // "study again" rebuilds the session
+    assert.equal(pickNext({ cards, stats: newStats(), config: cfg, now: QNOW }).kind, 'done');
+  assert.ok(aheadBatch(cards, cfg, QDAY).length > 0); // ...but work exists to pull forward
+});
+
+test('queue: aheadBatch takes the soonest future reviews, never splitting a day', () => {
+  const batch = aheadBatch(caughtUp(), cfg, QDAY, 1);
+  assert.deepEqual(batch.sort(), ['r1', 'r2']);      // min 1, but day QDAY+2 comes whole
+});
+
+test('queue: aheadBatch stops at the deck, and is empty with nothing scheduled', () => {
+  assert.equal(aheadBatch(caughtUp(), cfg, QDAY, 10).length, 3);
+  assert.deepEqual(aheadBatch([newC('n1'), revC('r1', QNOW - 1000)], cfg, QDAY, 10), []);
+  const susp = [{ ...revC('r1', dayStart(QDAY + 2, 4)), suspended: true }];
+  assert.deepEqual(aheadBatch(susp, cfg, QDAY, 10), []);
+});
+
+test('queue: review-ahead cards are pickable and bypass the spent review limit', () => {
+  const stats = newStats();
+  recordReview(stats, 'good', QDAY, true);
+  recordReview(stats, 'good', QDAY, true);          // review cap (2) spent
+  const cards = caughtUp();
+  const ahead = new Set(['r1', 'r2']);
+  assert.equal(pickNext({ cards, stats, config: cfg, now: QNOW }).kind, 'done');
+  const p = pickNext({ cards, stats, config: cfg, now: QNOW, ahead });
+  assert.equal(p.kind, 'card');
+  assert.ok(ahead.has(p.id));
+});
+
+test('queue: normal due work outranks review-ahead cards', () => {
+  const cards = [...caughtUp(), revC('due', QNOW - 1000), learnC('l1', QNOW - 1000)];
+  const ahead = new Set(['r1', 'r2']);
+  const opts = { cards, stats: newStats(), config: cfg, now: QNOW, ahead };
+  assert.equal(pickNext(opts).id, 'l1');            // learning first
+  assert.equal(pickNext({ ...opts, cards: cards.filter(c => c.id !== 'l1') }).id, 'due');
+});
+
+test('queue: counts fold review-ahead into the due total', () => {
+  const cards = caughtUp();
+  const base = { cards, stats: newStats(), config: cfg, now: QNOW };
+  assert.equal(counts(base).due, 0);
+  assert.equal(counts({ ...base, ahead: new Set(['r1', 'r2']) }).due, 2);
 });
 
 import { DEFAULT_CONFIG, parseSteps, formatSteps, normalizeConfig } from './src/config.js';
