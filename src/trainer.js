@@ -2,7 +2,7 @@ import { newCard, schedule, previewIntervals, isLeech, DAY_MS } from './fsrs.js'
 import { newStats, recordReview, recordNew, reviewsOn, recordLog,
   unrecordReview, unrecordNew, unrecordLog,
   currentStreak, bestStreak, retention } from './stats.js';
-import { pickNext, counts as queueCounts, cramAdvance } from './queue.js';
+import { pickNext, counts as queueCounts, cramAdvance, aheadBatch } from './queue.js';
 import { dayOf } from './day.js';
 import { normalizeConfig, parseSteps, formatSteps } from './config.js';
 import './pwa.js';
@@ -11,7 +11,7 @@ import './pwa.js';
 export function createTrainer(spec) {
   const STORE_KEY = spec.keys.store, STATS_KEY = spec.keys.stats;
   const CONFIG_KEY = spec.keys.config;
-  const MATURE_DAYS = 21, STUDY_MORE_N = 10, UNDO_CAP = 100;
+  const MATURE_DAYS = 21, STUDY_MORE_N = 10, AHEAD_N = 10, UNDO_CAP = 100;
 
   function loadConfig() {
     try { return normalizeConfig(JSON.parse(localStorage.getItem(CONFIG_KEY)) || {}); }
@@ -61,6 +61,7 @@ export function createTrainer(spec) {
 
   let active = [], current = null, flipped = false, reviewed = 0;
   let mode = 'normal', extraNew = 0, cramQueue = [], crammed = 0;
+  let aheadIds = new Set();
   let undoStack = [];
   const undoBtn = $('undo');
 
@@ -76,7 +77,6 @@ export function createTrainer(spec) {
     const e = undoStack.pop();
     if (!e) return;
     undoBtn.hidden = undoStack.length === 0;
-    stage.hidden = false; doneEl.hidden = true;
     flipped = false;
     if (e.kind === 'cram') {
       cramQueue = e.queue;
@@ -85,6 +85,7 @@ export function createTrainer(spec) {
       return render();
     }
     store[e.id] = e.prev;
+    if (e.wasAhead) aheadIds.add(e.id);
     unrecordReview(stats, e.grade, e.day, e.wasReview);
     if (e.wasNew) unrecordNew(stats, e.day);
     unrecordLog(stats);
@@ -125,7 +126,8 @@ export function createTrainer(spec) {
       current = cramQueue[0];
       return render();
     }
-    const pick = pickNext({ cards: sessionCards(), stats, config: sessionConfig(), now: now(), lastId });
+    const pick = pickNext({ cards: sessionCards(), stats, config: sessionConfig(),
+      now: now(), lastId, ahead: aheadIds });
     if (pick.kind === 'card') { current = pick.id; return render(); }
     current = null;
     showDone(pick);
@@ -143,6 +145,7 @@ export function createTrainer(spec) {
   }
 
   function render() {
+    stage.hidden = false; doneEl.hidden = true;
     cardEl.hidden = false;
     const { badge, front, back } = spec.renderCard(byId[current]);
     scriptEl.textContent = badge;
@@ -180,7 +183,8 @@ export function createTrainer(spec) {
     const t = now();
     const day = dayOf(t, CONFIG.rolloverHour);
     pushUndo({ kind: 'grade', id: current, prev: { ...before }, day, grade: g,
-      wasNew: before.state === 'new', wasReview: before.state === 'review' });
+      wasNew: before.state === 'new', wasReview: before.state === 'review',
+      wasAhead: aheadIds.delete(current) });
     const after = schedule(before, g, t, CONFIG);
     if (before.state === 'review' && g === 'again'
         && isLeech(after.lapses, CONFIG.leechThreshold)) after.suspended = true;
@@ -199,7 +203,8 @@ export function createTrainer(spec) {
       statsEl.innerHTML = `<span class="ct-learn">cram · ${cramQueue.length} left</span>`;
       return;
     }
-    const c = queueCounts({ cards: sessionCards(), stats, config: sessionConfig(), now: now() });
+    const c = queueCounts({ cards: sessionCards(), stats, config: sessionConfig(),
+      now: now(), ahead: aheadIds });
     statsEl.innerHTML = `<span class="ct-new">${c.newLeft} new</span> · ` +
       `<span class="ct-learn">${c.learning} learning</span> · ` +
       `<span class="ct-due">${c.due} due</span>`;
@@ -266,30 +271,39 @@ export function createTrainer(spec) {
     const body = reviewed > 0
       ? `${reviewed} card${reviewed === 1 ? '' : 's'} reviewed.${capped}${when}`
       : `nothing due right now.${capped}${when}`;
+    // only offer actions that can actually produce a card from here
     let extra = '';
     if (deckBreakdown().fresh > 0)
       extra += `<button id="more-new" class="grade hard">study ${STUDY_MORE_N} more new</button>`;
+    const batch = aheadBatch(sessionCards(), CONFIG, t, AHEAD_N);
+    if (batch.length)
+      extra += `<button id="ahead" class="grade good">review ${batch.length} ahead</button>`;
     extra += '<button id="cram" class="grade">cram (free practice)</button>';
     doneEl.innerHTML = `<div class="done-mark">${head}</div>` +
-      `<p class="done-note">${body}</p>` + statsPanel() +
-      '<button id="restart" class="grade good">study again</button>' + extra;
-    $('restart').addEventListener('click', startSession);
+      `<p class="done-note">${body}</p>` + statsPanel() + extra;
     if ($('more-new')) $('more-new').addEventListener('click', studyMoreNew);
+    if ($('ahead')) $('ahead').addEventListener('click', () => reviewAhead(batch));
     $('cram').addEventListener('click', startCram);
     if ($('unsuspend')) $('unsuspend').addEventListener('click', unsuspendAll);
+    updateStats();
   }
 
   function startSession() {
     clearUndo();
-    mode = 'normal'; extraNew = 0;
-    stage.hidden = false; doneEl.hidden = true;
+    mode = 'normal'; extraNew = 0; aheadIds = new Set();
     buildSession();
   }
 
   // Custom Study: raise today's new limit, keep going (reschedules normally).
   function studyMoreNew() {
     extraNew += STUDY_MORE_N;
-    stage.hidden = false; doneEl.hidden = true;
+    next();
+  }
+
+  // Custom Study: pull the soonest future reviews into today, graded for real.
+  // Answering early scores high recall, so FSRS grows them less — as in Anki.
+  function reviewAhead(ids) {
+    for (const id of ids) aheadIds.add(id);
     next();
   }
 
@@ -298,7 +312,6 @@ export function createTrainer(spec) {
     clearUndo();
     mode = 'cram'; cramQueue = shuffle(deckCards().filter(id => !stateFor(id).suspended));
     crammed = 0;
-    stage.hidden = false; doneEl.hidden = true;
     next();
   }
 
@@ -375,8 +388,10 @@ export function createTrainer(spec) {
   });
 
   // On foreground return, re-pick: a card that ripened while asleep shows now.
+  // The done screen re-picks too, so a finished deck opens itself at rollover.
   function resume() {
-    if (doneEl.hidden && !current) next();
+    if (mode === 'cram') return;
+    if (!doneEl.hidden || !current) next();
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) resume(); });
   window.addEventListener('pageshow', resume);
